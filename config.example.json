@@ -1,0 +1,14 @@
+{
+  "mysql": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "YOUR_USER",
+    "password": "YOUR_PASSWORD",
+    "database": "new_stocks_db"
+  },
+  "paths": {
+    "aiReviews": "C:\\path\\to\\Database Project\\Reports\\AI Reviews",
+    "databaseProject": "C:\\path\\to\\Database Project"
+  },
+  "scripts": []
+}

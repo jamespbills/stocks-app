@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+
+  /* --- Backgrounds --- */
+  --color-bg-base:     #0D0F12;
+  --color-bg-surface:  #111318;
+  --color-bg-elevated: #16181D;
+  --color-bg-overlay:  #1C1F26;
+  --color-bg-input:    #0D0F12;
+
+  /* --- Text --- */
+  --color-text-primary:     rgba(255, 255, 255, 0.92);
+  --color-text-secondary:   rgba(255, 255, 255, 0.60);
+  --color-text-muted:       rgba(255, 255, 255, 0.38);
+  --color-text-disabled:    rgba(255, 255, 255, 0.22);
+  --color-text-placeholder: rgba(255, 255, 255, 0.28);
+
+  /* --- Borders & dividers --- */
+  --color-border-subtle:  rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.10);
+  --color-border-strong:  rgba(255, 255, 255, 0.20);
+  --color-border-focus:   rgba(255, 255, 255, 0.45);
+
+  /* --- Interactive states --- */
+  --color-interactive-hover:          rgba(255, 255, 255, 0.05);
+  --color-interactive-active:         rgba(255, 255, 255, 0.10);
+  --color-interactive-text-active:    rgba(255, 255, 255, 0.92);
+  --color-interactive-text-inactive:  rgba(255, 255, 255, 0.45);
+
+  /* --- Semantic: price movement --- */
+  --color-up:      #4ADE80;
+  --color-up-bg:   rgba(34, 197, 94, 0.12);
+  --color-down:    #F87171;
+  --color-down-bg: rgba(239, 68, 68, 0.10);
+
+  /* --- Semantic: status / urgency --- */
+  --color-warning:    #FCD34D;
+  --color-warning-bg: rgba(245, 158, 11, 0.13);
+  --color-danger:     #F87171;
+  --color-danger-bg:  rgba(239, 68, 68, 0.10);
+  --color-info:       rgba(255, 255, 255, 0.60);
+  --color-info-bg:    rgba(255, 255, 255, 0.07);
+
+  /* --- Play score colours --- */
+  --color-play-13-text: #4ADE80;
+  --color-play-13-bg:   rgba(34, 197, 94, 0.13);
+  --color-play-12-text: #FCD34D;
+  --color-play-12-bg:   rgba(245, 158, 11, 0.13);
+  --color-play-low-text: rgba(255, 255, 255, 0.38);
+  --color-play-low-bg:   rgba(255, 255, 255, 0.07);
+
+  /* --- TA chart colours --- */
+  --color-chart-price-line:  rgba(255, 255, 255, 0.85);
+  --color-chart-sma:         rgba(255, 255, 255, 0.35);
+  --color-chart-volume-up:   rgba(34, 197, 94, 0.40);
+  --color-chart-volume-down: rgba(239, 68, 68, 0.40);
+  --color-chart-date-line:   #EAB308;
+  --color-chart-grid:        rgba(255, 255, 255, 0.05);
+  --color-chart-axis-text:   rgba(255, 255, 255, 0.35);
+
+  /* --- Script launcher / terminal --- */
+  --color-terminal-bg:       #080A0D;
+  --color-terminal-text:     rgba(255, 255, 255, 0.80);
+  --color-terminal-stdout:   rgba(255, 255, 255, 0.80);
+  --color-terminal-stderr:   #F87171;
+  --color-terminal-exit-ok:  #4ADE80;
+  --color-terminal-exit-err: #F87171;
+
+  /* --- Typography --- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+               'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code',
+               ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --text-xs:  11px;
+  --text-sm:  12.5px;
+  --text-md:  14px;
+  --text-lg:  16px;
+  --text-xl:  20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+
+  --font-regular: 400;
+  --font-medium:  500;
+
+  --leading-tight:   1.3;
+  --leading-normal:  1.6;
+  --leading-relaxed: 1.8;
+
+  /* --- Spacing (4px base) --- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Border radius --- */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+
+  /* --- Layout --- */
+  --sidebar-width:            200px;
+  --sidebar-width-collapsed:   52px;
+  --sidebar-icon-size:         15px;
+  --topbar-height:             48px;
+  --table-row-height:          36px;
+  --table-row-height-compact:  28px;
+
+  /* --- Z-index layers --- */
+  --z-base:      0;
+  --z-sticky:   10;
+  --z-dropdown: 100;
+  --z-modal:    200;
+  --z-palette:  300;
+  --z-toast:    400;
+
+  /* --- Transitions --- */
+  --transition-fast:    100ms ease;
+  --transition-default: 150ms ease;
+  --transition-slow:    250ms ease;
+}
+
+/* Base resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Allow text selection in content areas */
+p, span, td, th, input, textarea, [data-selectable] {
+  user-select: text;
+}
