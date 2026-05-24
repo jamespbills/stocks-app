@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 
 export interface DBStatus {
   connected: boolean
@@ -43,5 +43,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     minimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
     maximize: (): Promise<void> => ipcRenderer.invoke('win:maximize'),
     close: (): Promise<void> => ipcRenderer.invoke('win:close')
+  },
+  zoom: {
+    getZoomFactor: (): number => webFrame.getZoomFactor(),
+    setZoomFactor: (factor: number): void => webFrame.setZoomFactor(factor)
   }
 })

@@ -140,7 +140,10 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - *(When Claude adds a light mode toggle "just in case", remind it: dark only — see §6.)*
 - *(When Claude creates a README or guide file unprompted, remind it: no docs unless asked — see §6.)*
 - *(When Claude hardcodes a colour value instead of a CSS custom property, remind it: all colours are tokens — see §8.)*
+- *(When Claude imports Electron APIs — `webFrame`, `shell`, `nativeTheme`, etc. — directly in renderer/React code, remind it: the renderer is sandboxed and cannot import from `electron`. All Electron APIs must go through `preload.ts` → `contextBridge` → `window.electronAPI`.)*
 - *(When Claude implements window controls without platform branching, remind it: Windows = custom min/max/close top-right, macOS = system traffic lights — see §8.)*
+- *(When Claude sorts or compares a mysql2 DATE column, remind it: the value is a JS `Date` object at runtime, not a string. Use `instanceof Date` / `.getTime()` — never `String(v).localeCompare()`.)*
+- *(When Claude uses `ticker` as a React key or selection identity in a table, remind it: ticker is not unique — `view_watching` can return multiple rows per ticker. Use a composite `rowKey` — see `tasks/lessons.md`.)*
 
 ---
 

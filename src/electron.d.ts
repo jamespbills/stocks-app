@@ -34,6 +34,10 @@ declare global {
         maximize: () => Promise<void>
         close: () => Promise<void>
       }
+      zoom: {
+        getZoomFactor: () => number
+        setZoomFactor: (factor: number) => void
+      }
     }
   }
 }

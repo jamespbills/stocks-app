@@ -29,9 +29,10 @@ function SectionLabel({ children }: { children: string }): ReactElement {
 
 interface UpcomingRowProps {
   entry: CalendarEntry
+  highlight?: boolean
 }
 
-function UpcomingRow({ entry }: UpcomingRowProps): ReactElement {
+function UpcomingRow({ entry, highlight = false }: UpcomingRowProps): ReactElement {
   let dateColor = 'var(--color-text-muted)'
   if (entry.status === 'overdue') dateColor = 'var(--color-danger)'
   else if (entry.status === 'amber') dateColor = 'var(--color-warning)'
@@ -50,7 +51,10 @@ function UpcomingRow({ entry }: UpcomingRowProps): ReactElement {
         alignItems: 'center',
         gap: 10,
         padding: '6px 16px',
-        cursor: 'pointer'
+        paddingLeft: highlight ? 14 : 16,
+        cursor: 'pointer',
+        background: highlight ? 'var(--color-interactive-hover)' : 'transparent',
+        borderLeft: highlight ? '2px solid var(--color-border-focus)' : '2px solid transparent'
       }}
     >
       <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -168,8 +172,8 @@ export function UpcomingPanel({ entries }: UpcomingPanelProps): ReactElement {
         {upcoming.length > 0 && (
           <>
             <SectionLabel>Upcoming</SectionLabel>
-            {upcoming.map((e) => (
-              <UpcomingRow key={e.ticker} entry={e} />
+            {upcoming.map((e, i) => (
+              <UpcomingRow key={e.ticker} entry={e} highlight={i === 0} />
             ))}
           </>
         )}

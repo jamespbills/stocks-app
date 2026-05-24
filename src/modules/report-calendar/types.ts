@@ -3,7 +3,7 @@ export type EntryStatus = 'released' | 'overdue' | 'amber' | 'expected'
 export interface CalendarRow {
   ticker: string
   company: string
-  relevant_date: string | null
+  relevant_date: string | Date | null
   days_to_go: number | null
   is_already_reviewed: number
   is_past_grace_period: number
@@ -45,8 +45,16 @@ export type PopoverState =
   | { kind: 'entry'; date: string; ticker: string }
   | { kind: 'day'; date: string }
 
+function toDateStr(val: string | Date): string {
+  if (val instanceof Date) {
+    return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`
+  }
+  return val
+}
+
 export function rowToEntry(row: CalendarRow): CalendarEntry | null {
   if (!row.relevant_date) return null
+  const dateStr = toDateStr(row.relevant_date)
   const dtg = row.days_to_go ?? 0
   let status: EntryStatus
   if (row.is_already_reviewed) {
@@ -63,7 +71,7 @@ export function rowToEntry(row: CalendarRow): CalendarEntry | null {
   return {
     ticker: row.ticker,
     company: row.company,
-    date: row.relevant_date,
+    date: dateStr,
     period,
     status,
     days_to_go: dtg,

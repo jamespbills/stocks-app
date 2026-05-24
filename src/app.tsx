@@ -3,8 +3,10 @@ import { RouterProvider, ActiveModule } from './router'
 import { TitleBar } from './shell/title-bar'
 import { Sidebar } from './shell/sidebar'
 import { CommandPalette } from './shell/command-palette'
+import { useZoom } from './hooks/useZoom'
 
 export default function App(): ReactElement {
+  useZoom()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [paletteKey, setPaletteKey] = useState(0)
 

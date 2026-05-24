@@ -26,6 +26,7 @@ const CALENDAR_SQL = `
     vec.p_play, vec.p_play_2
   FROM view_earnings_calendar vec
   JOIN dim_companies dc USING (ticker)
+  WHERE vec.is_past_grace_period = 0 AND vec.is_already_reviewed = 0 AND vec.meets_play_filter = 1
 `
 
 const SETTINGS_SQL = `
@@ -249,25 +250,49 @@ export default function ReportCalendar(): ReactElement {
         </button>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <select
-            value={playFilter}
-            onChange={(e) => setPlayFilter(e.target.value as PlayFilter)}
+          <div
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
               height: 28,
               padding: '0 8px',
               background: 'var(--color-bg-input)',
               border: '1px solid var(--color-border-strong)',
               borderRadius: 5,
-              color: 'var(--color-text-secondary)',
-              fontSize: 12.5,
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              outline: 'none'
+              fontSize: 12.5
             }}
           >
-            <option value="all">All scores</option>
-            <option value="plays">Plays only</option>
-          </select>
+            <span
+              style={{
+                fontSize: 10.5,
+                color: 'var(--color-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
+                fontFamily: 'inherit',
+                flexShrink: 0
+              }}
+            >
+              Play
+            </span>
+            <select
+              value={playFilter}
+              onChange={(e) => setPlayFilter(e.target.value as PlayFilter)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--color-text-primary)',
+                fontSize: 12.5,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                outline: 'none',
+                padding: 0
+              }}
+            >
+              <option value="all">All scores</option>
+              <option value="plays">Plays only</option>
+            </select>
+          </div>
 
           <button
             onClick={togglePanel}
