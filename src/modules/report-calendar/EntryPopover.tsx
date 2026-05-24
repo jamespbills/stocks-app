@@ -65,6 +65,35 @@ export function EntryPopover({ entry, onDismiss, onNavigate }: EntryPopoverProps
         </span>{' '}
         {entry.status === 'released' ? 'results' : 'expected'}
       </div>
+      {entry.hasOverride && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: '6px 8px',
+            borderRadius: 4,
+            background: 'var(--color-warning-bg)',
+            border: '1px solid rgba(252, 211, 77, 0.2)'
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10.5,
+              textTransform: 'uppercase',
+              letterSpacing: 0.4,
+              color: 'var(--color-warning)',
+              marginBottom: entry.overrideReason ? 3 : 0,
+              fontFamily: 'var(--font-mono)'
+            }}
+          >
+            Manual override
+          </div>
+          {entry.overrideReason && (
+            <div style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>
+              {entry.overrideReason}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           onClick={() => {

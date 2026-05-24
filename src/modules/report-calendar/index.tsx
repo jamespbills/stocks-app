@@ -11,21 +11,26 @@ import { useIpcQuery } from '../../hooks/useIpcQuery'
 import { useRouter } from '../../hooks/use-router'
 import { CalendarGrid } from './CalendarGrid'
 import { UpcomingPanel } from './UpcomingPanel'
+import { DateOverridesModal } from './DateOverridesModal'
 import { rowToEntry } from './types'
 import type { CalendarRow, CalendarEntry, PopoverState } from './types'
 
 const CALENDAR_SQL = `
   SELECT
     vec.ticker, dc.name AS company,
-    vec.relevant_date, vec.days_to_go,
+    COALESCE(ado.actual_date, vec.relevant_date) AS relevant_date,
+    DATEDIFF(COALESCE(ado.actual_date, vec.relevant_date), CURDATE()) AS days_to_go,
     vec.is_already_reviewed, vec.is_past_grace_period,
     vec.meets_play_filter, vec.calendar_status, vec.urgency,
     vec.r_financial_year, vec.r_filing_identifier,
     vec.next_expected_filing, vec.estimated_release_date,
     vec.best_api_date, vec.r_play, vec.r_play_2,
-    vec.p_play, vec.p_play_2
+    vec.p_play, vec.p_play_2,
+    CASE WHEN ado.ticker IS NOT NULL THEN 1 ELSE 0 END AS has_override,
+    ado.reason AS override_reason
   FROM view_earnings_calendar vec
   JOIN dim_companies dc USING (ticker)
+  LEFT JOIN app_date_overrides ado USING (ticker)
   WHERE vec.is_past_grace_period = 0 AND vec.is_already_reviewed = 0 AND vec.meets_play_filter = 1
 `
 
@@ -35,8 +40,11 @@ const SETTINGS_SQL = `
   WHERE setting_key = 'calendar.panelVisible'
 `
 
+const OVERRIDES_COUNT_SQL = `SELECT COUNT(*) AS count FROM app_date_overrides`
+
 type PlayFilter = 'all' | 'plays'
 type SettingsRow = { setting_key: string; setting_value: string | null }
+type OverridesCountRow = { count: number }
 
 interface NavState {
   year: number
@@ -66,8 +74,11 @@ function monthLabel(year: number, month: number): string {
 export default function ReportCalendar(): ReactElement {
   const { navigate } = useRouter()
 
-  const { data: rows } = useIpcQuery<CalendarRow[]>(CALENDAR_SQL)
+  const { data: rows, refetch: refetchCalendar } = useIpcQuery<CalendarRow[]>(CALENDAR_SQL)
   const { data: settingsRows } = useIpcQuery<SettingsRow[]>(SETTINGS_SQL)
+  const { data: overridesCountRows, refetch: refetchOverridesCount } =
+    useIpcQuery<OverridesCountRow[]>(OVERRIDES_COUNT_SQL)
+  const overridesCount = overridesCountRows?.[0]?.count ?? 0
 
   const now = new Date()
   const [nav, dispatchNav] = useReducer(navReducer, {
@@ -77,6 +88,7 @@ export default function ReportCalendar(): ReactElement {
   const [playFilter, setPlayFilter] = useState<PlayFilter>('all')
   const [panelVisible, setPanelVisible] = useState(true)
   const [popover, setPopover] = useState<PopoverState>(null)
+  const [overridesOpen, setOverridesOpen] = useState(false)
   const settingsRestoredRef = useRef(false)
 
   // Restore panel visibility from settings (one-time on first load)
@@ -146,6 +158,11 @@ export default function ReportCalendar(): ReactElement {
   }, [])
 
   const dismissPopover = useCallback(() => setPopover(null), [])
+
+  const handleOverrideMutate = useCallback(() => {
+    refetchCalendar()
+    refetchOverridesCount()
+  }, [refetchCalendar, refetchOverridesCount])
 
   // Derive all calendar entries from DB rows
   const allEntries = useMemo<CalendarEntry[]>(() => {
@@ -295,6 +312,49 @@ export default function ReportCalendar(): ReactElement {
           </div>
 
           <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setOverridesOpen(true)
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 10px',
+              borderRadius: 5,
+              border: '1px solid var(--color-border-strong)',
+              background: 'transparent',
+              color: 'var(--color-text-secondary)',
+              fontSize: 12.5,
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            Date overrides
+            {overridesCount > 0 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
+                  borderRadius: 8,
+                  background: 'var(--color-warning-bg)',
+                  color: 'var(--color-warning)',
+                  fontSize: 10.5,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 500,
+                  lineHeight: 1
+                }}
+              >
+                {overridesCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={togglePanel}
             style={{
               display: 'inline-flex',
@@ -330,6 +390,13 @@ export default function ReportCalendar(): ReactElement {
 
         {panelVisible && <UpcomingPanel entries={upcomingEntries} />}
       </div>
+
+      {overridesOpen && (
+        <DateOverridesModal
+          onClose={() => setOverridesOpen(false)}
+          onMutate={handleOverrideMutate}
+        />
+      )}
     </div>
   )
 }

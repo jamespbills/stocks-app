@@ -60,7 +60,13 @@ export function DayPopover({
               onEntryClick(e.ticker)
             }}
           >
-            <EntryChip ticker={e.ticker} period={e.period} status={e.status} size="small" />
+            <EntryChip
+              ticker={e.ticker}
+              period={e.period}
+              status={e.status}
+              size="small"
+              hasOverride={e.hasOverride}
+            />
             <span
               style={{
                 marginLeft: 'auto',

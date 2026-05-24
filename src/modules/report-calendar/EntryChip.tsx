@@ -7,6 +7,7 @@ interface EntryChipProps {
   status: EntryStatus
   selected?: boolean
   size?: 'normal' | 'small'
+  hasOverride?: boolean
   onClick?: (e: React.MouseEvent) => void
 }
 
@@ -44,6 +45,7 @@ export function EntryChip({
   status,
   selected = false,
   size = 'normal',
+  hasOverride = false,
   onClick
 }: EntryChipProps): ReactElement {
   const { bg, color, border } = chipStyle(status, selected)
@@ -70,6 +72,19 @@ export function EntryChip({
       <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{ticker}</span>
       <span style={{ opacity: 0.7 }}>·</span>
       <span style={{ fontFamily: 'var(--font-mono)' }}>{period}</span>
+      {hasOverride && (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: 'var(--color-warning)',
+            opacity: 0.85,
+            flexShrink: 0
+          }}
+        />
+      )}
     </div>
   )
 }

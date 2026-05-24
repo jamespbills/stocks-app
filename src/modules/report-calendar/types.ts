@@ -19,6 +19,8 @@ export interface CalendarRow {
   r_play_2: number | null
   p_play: number | null
   p_play_2: number | null
+  has_override: number
+  override_reason: string | null
 }
 
 export interface CalendarEntry {
@@ -30,6 +32,8 @@ export interface CalendarEntry {
   days_to_go: number
   r_play: number | null
   r_play_2: number | null
+  hasOverride: boolean
+  overrideReason: string | null
 }
 
 export interface CalendarCell {
@@ -76,7 +80,9 @@ export function rowToEntry(row: CalendarRow): CalendarEntry | null {
     status,
     days_to_go: dtg,
     r_play: row.r_play,
-    r_play_2: row.r_play_2
+    r_play_2: row.r_play_2,
+    hasOverride: row.has_override === 1,
+    overrideReason: row.override_reason ?? null
   }
 }
 

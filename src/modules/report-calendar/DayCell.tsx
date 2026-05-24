@@ -86,6 +86,7 @@ export function DayCell({
           ticker={e.ticker}
           period={e.period}
           status={e.status}
+          hasOverride={e.hasOverride}
           selected={
             popover?.kind === 'entry' && popover.date === cell.date && popover.ticker === e.ticker
           }
