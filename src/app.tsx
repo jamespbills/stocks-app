@@ -8,6 +8,26 @@ import { useZoom } from './hooks/useZoom'
 export default function App(): ReactElement {
   useZoom()
   const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useEffect(() => {
+    void window.electronAPI.db
+      .query(
+        `SELECT setting_value FROM app_settings WHERE setting_key = 'display.zoom.default'`,
+        []
+      )
+      .then((rows) => {
+        const row = (rows as { setting_value: string | null }[])[0]
+        if (row?.setting_value != null) {
+          const factor = parseFloat(row.setting_value)
+          if (!isNaN(factor) && factor >= 0.5 && factor <= 2.5) {
+            window.electronAPI.zoom.setZoomFactor(factor)
+          }
+        }
+      })
+      .catch(() => {
+        // non-fatal — stays at 1.0
+      })
+  }, [])
   const [paletteKey, setPaletteKey] = useState(0)
 
   const closePalette = useCallback(() => setPaletteOpen(false), [])

@@ -18,7 +18,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   TrendingUp,
   FileText,
   Terminal,
-  BarChart2
+  BarChart2,
+  Settings
 }
 
 interface NavItemProps {
@@ -156,21 +157,32 @@ export function Sidebar(): ReactElement {
       {/* Bottom section */}
       <div style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
         <button
+          onClick={() => navigate('settings')}
           className="flex items-center gap-[10px] w-full transition-[background,color] duration-[var(--transition-fast)]"
           style={{
             padding: 'var(--space-2) var(--space-3)',
             margin: '4px var(--space-2)',
             width: 'calc(100% - var(--space-4))',
             borderRadius: 'var(--radius-md)',
-            color: 'var(--color-interactive-text-inactive)',
+            background: activeId === 'settings' ? 'var(--color-interactive-active)' : 'transparent',
+            color:
+              activeId === 'settings'
+                ? 'var(--color-interactive-text-active)'
+                : 'var(--color-interactive-text-inactive)',
             fontSize: 'var(--text-md)'
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = 'var(--color-interactive-hover)')
-          }
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          onMouseEnter={(e) => {
+            if (activeId !== 'settings')
+              e.currentTarget.style.background = 'var(--color-interactive-hover)'
+          }}
+          onMouseLeave={(e) => {
+            if (activeId !== 'settings') e.currentTarget.style.background = 'transparent'
+          }}
         >
-          <Settings size={15} style={{ opacity: 0.7 }} />
+          <Settings
+            size={15}
+            style={{ flexShrink: 0, opacity: activeId === 'settings' ? 1 : 0.7 }}
+          />
           <span>Settings</span>
         </button>
         <DBIndicator connected={dbConnected} />

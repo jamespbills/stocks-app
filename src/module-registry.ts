@@ -5,7 +5,7 @@ export interface ModuleDefinition {
   id: string
   label: string
   icon: string
-  group: 'data' | 'tools'
+  group: 'data' | 'tools' | 'system'
   load: LazyExoticComponent<ComponentType>
 }
 
@@ -51,6 +51,13 @@ export const modules: ModuleDefinition[] = [
     icon: 'BarChart2',
     group: 'tools',
     load: lazy(() => import('./modules/ta-charts'))
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: 'Settings',
+    group: 'system',
+    load: lazy(() => import('./modules/settings'))
   }
 ]
 
