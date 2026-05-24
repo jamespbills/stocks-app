@@ -62,7 +62,7 @@ export default function WatchingDashboard(): ReactElement {
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
-  const [sort, setSort] = useState<SortState>({ key: null, dir: null })
+  const [sort, setSort] = useState<SortState>({ key: 'date_released', dir: 'asc' })
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -138,7 +138,7 @@ export default function WatchingDashboard(): ReactElement {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      const pid = await window.electronAPI.scripts.launch('python', ['update_live_prices.py'])
+      const pid = await window.electronAPI.scripts.launchBuiltin('refresh_prices')
       const unsub = window.electronAPI.scripts.onExit((exitPid) => {
         if (exitPid === pid) {
           unsub()

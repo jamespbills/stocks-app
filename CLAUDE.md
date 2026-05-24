@@ -91,7 +91,7 @@ If verification fails after 3 attempts, stop. Report: what you tried, the failin
 - **Never hardcode file paths.** All external paths come from `config.local.json` → `AppConfig`. Never fall back to a hardcoded string.
 - **Never commit `config.local.json`.** It is git-ignored. Never put real credentials in `config.example.json`.
 - **No SQLite.** All app state in `new_stocks_db` (`app_*` tables). No exceptions.
-- **No new backend service.** No Express, no Flask, no localhost API. Subprocess calls go via `scripts:launch` IPC only.
+- **No new backend service.** No Express, no Flask, no localhost API. Subprocess calls go via IPC only: `scripts:launch` for user-defined scripts from config, `scripts:launchBuiltin(name)` for app-local scripts in `stock-app/scripts/` (resolves path from `app.getAppPath()`, injects DB credentials as env vars automatically).
 - **No ORM.** Direct mysql2 only. Do not install Prisma, Drizzle, Sequelize, or TypeORM.
 - **No light mode.** Dark only. Do not add a theme toggle.
 - **Never modify files in `Database Project\`.** Read-only reference.
@@ -144,6 +144,7 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - *(When Claude implements window controls without platform branching, remind it: Windows = custom min/max/close top-right, macOS = system traffic lights — see §8.)*
 - *(When Claude sorts or compares a mysql2 DATE column, remind it: the value is a JS `Date` object at runtime, not a string. Use `instanceof Date` / `.getTime()` — never `String(v).localeCompare()`.)*
 - *(When Claude uses `ticker` as a React key or selection identity in a table, remind it: ticker is not unique — `view_watching` can return multiple rows per ticker. Use a composite `rowKey` — see `tasks/lessons.md`.)*
+- *(When calling `scripts:launch`, the first arg is the script file path — not `'python'`. The handler hardcodes `python` as the executable: `spawn('python', [scriptPath, ...args])`. For app-local scripts in `stock-app/scripts/`, use `scripts:launchBuiltin('name')` instead — it resolves the path and injects DB creds as env vars.)*
 
 ---
 

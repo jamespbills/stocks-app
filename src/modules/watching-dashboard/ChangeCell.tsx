@@ -1,5 +1,12 @@
 import type { ReactElement } from 'react'
 
+function intensityColor(value: number): string {
+  const magnitude = Math.abs(value) * 100
+  const t = Math.min(Math.max((magnitude - 5) / 55, 0), 1)
+  const alpha = (0.35 + t * 0.65).toFixed(2)
+  return value >= 0 ? `rgba(74, 222, 128, ${alpha})` : `rgba(248, 113, 113, ${alpha})`
+}
+
 interface ChangeCellProps {
   value: number | null
   size?: number
@@ -28,7 +35,7 @@ export function ChangeCell({
         fontFamily: 'var(--font-mono)',
         fontSize: size,
         fontVariantNumeric: 'tabular-nums',
-        color: up ? 'var(--color-up)' : 'var(--color-down)',
+        color: intensityColor(value),
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,

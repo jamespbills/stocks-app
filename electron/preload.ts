@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scripts: {
     launch: (scriptPath: string, args: string[]): Promise<number> =>
       ipcRenderer.invoke('scripts:launch', { scriptPath, args }),
+    launchBuiltin: (name: string): Promise<number> =>
+      ipcRenderer.invoke('scripts:launchBuiltin', name),
     stop: (pid: number): Promise<void> => ipcRenderer.invoke('scripts:stop', pid),
     onOutput: (cb: (pid: number, line: string, stream: 'stdout' | 'stderr') => void) => {
       const handler = (

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, type ReactElement } from 'react'
+import { useRef, useEffect, useCallback, useMemo, type ReactElement } from 'react'
 import { PlayPill } from './PlayPill'
 import { ChangeCell } from './ChangeCell'
 import type { WatchingRow, SortState } from './types'
@@ -16,8 +16,8 @@ const COLS: ColDef[] = [
   { key: 'company', label: 'COMPANY', align: 'left', width: null, dropAt: 980 },
   { key: 'live_price', label: 'LAST', align: 'right', width: 88, dropAt: null },
   { key: 'pct_change', label: 'CHG %', align: 'right', width: 86, dropAt: null },
-  { key: 'play', label: 'PLAY', align: 'left', width: 56, dropAt: null },
-  { key: 'play_2', label: 'PLAY 2', align: 'left', width: 64, dropAt: null },
+  { key: 'play', label: 'PLAY', align: 'left', width: 68, dropAt: null },
+  { key: 'play_2', label: 'PLAY 2', align: 'left', width: 76, dropAt: null },
   { key: 'sector', label: 'SECTOR', align: 'left', width: 130, dropAt: 1100 },
   { key: 'date_released', label: 'LAST REPORT', align: 'left', width: 145, dropAt: 820 },
   { key: 'portfolio', label: '', align: 'left', width: 36, dropAt: null }
@@ -41,6 +41,10 @@ function formatDate(dateStr: string | null): string {
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function isSectorPlay(row: WatchingRow): boolean {
+  return (row.play_sector_rating ?? 0) > 0 || (row.play_2_sector_rating ?? 0) > 0
 }
 
 function dateUrgencyColor(dateStr: string | null): string {
@@ -90,7 +94,22 @@ export function WatchingTable({
 }: WatchingTableProps): ReactElement {
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
 
-  const visibleCols = COLS.filter((c) => {
+  const sectorWidth = useMemo(() => {
+    if (!rows.length) return 160
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return 160
+    ctx.font = '400 13.5px -apple-system, BlinkMacSystemFont, "Inter", sans-serif'
+    const maxW = Math.max(...rows.map((r) => ctx.measureText(r.sector ?? '').width))
+    return Math.ceil(maxW) + 32 // 24px cell padding + 8px buffer
+  }, [rows])
+
+  const effectiveCols = useMemo(
+    () => COLS.map((c) => (c.key === 'sector' ? { ...c, width: sectorWidth } : c)),
+    [sectorWidth]
+  )
+
+  const visibleCols = effectiveCols.filter((c) => {
     if (c.dropAt === null) return true
     if (slideOverOpen) {
       // when slide-over open, apply the drop rules for the compressed state
@@ -311,7 +330,9 @@ export function WatchingTable({
                 position: 'sticky',
                 top: 0,
                 cursor: c.key !== 'portfolio' ? 'pointer' : 'default',
-                userSelect: 'none'
+                userSelect: 'none',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden'
               }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -331,6 +352,8 @@ export function WatchingTable({
         {sortedRows.map((row) => {
           const rk = rowKey(row)
           const selected = rk === selectedRowKey
+          const sectorPlay = isSectorPlay(row)
+          const defaultBg = sectorPlay ? 'rgba(245, 158, 11, 0.07)' : 'transparent'
           return (
             <tr
               key={rk}
@@ -338,7 +361,7 @@ export function WatchingTable({
               onClick={() => onRowClick(rk, row.ticker)}
               style={{
                 borderBottom: '1px solid var(--color-border-subtle)',
-                background: selected ? 'var(--color-interactive-active)' : 'transparent',
+                background: selected ? 'var(--color-interactive-active)' : defaultBg,
                 height: 42,
                 cursor: 'pointer'
               }}
@@ -350,7 +373,7 @@ export function WatchingTable({
               }}
               onMouseLeave={(e) => {
                 if (!selected) {
-                  ;(e.currentTarget as HTMLTableRowElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLTableRowElement).style.background = defaultBg
                 }
               }}
             >
