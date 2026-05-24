@@ -7,7 +7,7 @@ interface PlayPillProps {
 
 export function PlayPill({ score, maxScore }: PlayPillProps): ReactElement {
   if (score === null) {
-    return <span style={{ color: 'var(--color-text-muted)', fontSize: 11 }}>—</span>
+    return <span style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>—</span>
   }
 
   let bg = 'var(--color-play-low-bg)'
@@ -27,17 +27,17 @@ export function PlayPill({ score, maxScore }: PlayPillProps): ReactElement {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 22,
+        minWidth: 26,
         padding: '1px 6px',
         fontFamily: 'var(--font-mono)',
-        fontSize: 11,
+        fontSize: 14,
         borderRadius: 3,
         background: bg,
         color,
         fontWeight: 500
       }}
     >
-      {score}
+      {Math.round(Number(score))}
     </span>
   )
 }

@@ -1,6 +1,7 @@
 export interface WatchingRow {
   ticker: string
   company: string
+  sector: string | null
   report_date: string | null
   financial_year: string | null
   filing_identifier: string | null

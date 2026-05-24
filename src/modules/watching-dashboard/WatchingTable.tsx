@@ -18,19 +18,20 @@ const COLS: ColDef[] = [
   { key: 'pct_change', label: 'CHG %', align: 'right', width: 86, dropAt: null },
   { key: 'play', label: 'PLAY', align: 'left', width: 56, dropAt: null },
   { key: 'play_2', label: 'PLAY 2', align: 'left', width: 64, dropAt: null },
-  { key: 'date_released', label: 'LAST REPORT', align: 'left', width: 110, dropAt: 820 },
-  { key: 'portfolio', label: '', align: 'left', width: 30, dropAt: null }
+  { key: 'sector', label: 'SECTOR', align: 'left', width: 130, dropAt: 1100 },
+  { key: 'date_released', label: 'LAST REPORT', align: 'left', width: 145, dropAt: 820 },
+  { key: 'portfolio', label: '', align: 'left', width: 36, dropAt: null }
 ]
 
 interface WatchingTableProps {
   rows: WatchingRow[]
   portfolioTickers: Set<string>
-  selectedTicker: string | null
+  selectedRowKey: string | null
   sort: SortState
   filter: string
   containerWidth: number
   slideOverOpen: boolean
-  onRowClick: (ticker: string) => void
+  onRowClick: (rk: string, ticker: string) => void
   onSortClick: (key: string) => void
   onPortfolioToggle: (ticker: string) => void
 }
@@ -54,21 +55,31 @@ function dateUrgencyColor(dateStr: string | null): string {
   return 'var(--color-text-muted)'
 }
 
+function toSortable(v: unknown): number | string {
+  if (v instanceof Date) return v.getTime()
+  if (typeof v === 'number') return v
+  return String(v ?? '')
+}
+
+function rowKey(row: WatchingRow): string {
+  return `${row.ticker}|${row.filing_identifier ?? String(row.date_released ?? row.financial_year ?? row.report_date ?? 'x')}`
+}
+
 function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' | null }): ReactElement {
   const color = active ? 'var(--color-text-primary)' : 'var(--color-text-muted)'
   if (active && dir === 'asc') {
-    return <span style={{ color, fontSize: 9 }}>▲</span>
+    return <span style={{ color, fontSize: 10 }}>▲</span>
   }
   if (active && dir === 'desc') {
-    return <span style={{ color, fontSize: 9 }}>▼</span>
+    return <span style={{ color, fontSize: 10 }}>▼</span>
   }
-  return <span style={{ color, fontSize: 9, opacity: 0.4 }}>⇅</span>
+  return <span style={{ color, fontSize: 10, opacity: 0.4 }}>⇅</span>
 }
 
 export function WatchingTable({
   rows,
   portfolioTickers,
-  selectedTicker,
+  selectedRowKey,
   sort,
   filter,
   containerWidth,
@@ -84,6 +95,7 @@ export function WatchingTable({
     if (slideOverOpen) {
       // when slide-over open, apply the drop rules for the compressed state
       if (c.key === 'company') return false
+      if (c.key === 'sector') return false
       if (c.key === 'date_released') return false
     }
     return containerWidth === 0 || containerWidth >= c.dropAt
@@ -104,31 +116,33 @@ export function WatchingTable({
     if (av === null && bv === null) return 0
     if (av === null) return 1
     if (bv === null) return -1
-    if (typeof av === 'number' && typeof bv === 'number') {
-      return sort.dir === 'asc' ? av - bv : bv - av
+    const as = toSortable(av)
+    const bs = toSortable(bv)
+    if (typeof as === 'number' && typeof bs === 'number') {
+      return sort.dir === 'asc' ? as - bs : bs - as
     }
-    const as = String(av)
-    const bs = String(bv)
-    return sort.dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as)
+    return sort.dir === 'asc'
+      ? String(as).localeCompare(String(bs))
+      : String(bs).localeCompare(String(as))
   })
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!selectedTicker) return
-      const idx = sortedRows.findIndex((r) => r.ticker === selectedTicker)
+      if (!selectedRowKey) return
+      const idx = sortedRows.findIndex((r) => rowKey(r) === selectedRowKey)
       if (idx === -1) return
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         const next = sortedRows[idx + 1]
-        if (next) onRowClick(next.ticker)
+        if (next) onRowClick(rowKey(next), next.ticker)
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         const prev = sortedRows[idx - 1]
-        if (prev) onRowClick(prev.ticker)
+        if (prev) onRowClick(rowKey(prev), prev.ticker)
       }
     },
-    [selectedTicker, sortedRows, onRowClick]
+    [selectedRowKey, sortedRows, onRowClick]
   )
 
   useEffect(() => {
@@ -138,14 +152,14 @@ export function WatchingTable({
 
   // Scroll selected row into view
   useEffect(() => {
-    if (!selectedTicker || !tbodyRef.current) return
-    const row = tbodyRef.current.querySelector(`[data-ticker="${selectedTicker}"]`)
+    if (!selectedRowKey || !tbodyRef.current) return
+    const row = tbodyRef.current.querySelector(`[data-rowkey="${selectedRowKey}"]`)
     row?.scrollIntoView({ block: 'nearest' })
-  }, [selectedTicker])
+  }, [selectedRowKey])
 
   function renderCell(col: ColDef, row: WatchingRow): ReactElement {
     const cellStyle: React.CSSProperties = {
-      padding: '8px 10px',
+      padding: '9px 12px',
       textAlign: col.align,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
@@ -161,7 +175,7 @@ export function WatchingTable({
               ...cellStyle,
               fontFamily: 'var(--font-mono)',
               color: 'var(--color-text-primary)',
-              fontWeight: 500
+              fontWeight: 600
             }}
           >
             {row.ticker}
@@ -205,6 +219,12 @@ export function WatchingTable({
             <PlayPill score={row.play_2} maxScore={14} />
           </td>
         )
+      case 'sector':
+        return (
+          <td key={col.key} style={{ ...cellStyle, color: 'var(--color-text-secondary)' }}>
+            {row.sector ?? '—'}
+          </td>
+        )
       case 'date_released':
         return (
           <td
@@ -220,7 +240,15 @@ export function WatchingTable({
         )
       case 'portfolio':
         return (
-          <td key={col.key} style={cellStyle}>
+          <td
+            key={col.key}
+            style={{
+              padding: '9px 6px',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden'
+            }}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -232,7 +260,7 @@ export function WatchingTable({
                 padding: 2,
                 cursor: 'pointer',
                 color: portfolioTickers.has(row.ticker) ? '#EAB308' : 'var(--color-text-muted)',
-                fontSize: 10,
+                fontSize: 14,
                 lineHeight: 1,
                 opacity: portfolioTickers.has(row.ticker) ? 1 : 0.3
               }}
@@ -254,7 +282,7 @@ export function WatchingTable({
       style={{
         width: '100%',
         borderCollapse: 'collapse',
-        fontSize: 12.5,
+        fontSize: 13.5,
         color: 'var(--color-text-secondary)',
         tableLayout: 'fixed'
       }}
@@ -271,12 +299,12 @@ export function WatchingTable({
               key={c.key}
               onClick={() => c.key !== 'portfolio' && onSortClick(c.key)}
               style={{
-                fontSize: 10.5,
+                fontSize: 11.5,
                 fontWeight: 400,
                 color: 'var(--color-text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
-                padding: '10px 10px',
+                padding: '10px 12px',
                 borderBottom: '1px solid var(--color-border-subtle)',
                 textAlign: c.align,
                 background: 'var(--color-bg-base)',
@@ -301,16 +329,17 @@ export function WatchingTable({
       </thead>
       <tbody ref={tbodyRef}>
         {sortedRows.map((row) => {
-          const selected = row.ticker === selectedTicker
+          const rk = rowKey(row)
+          const selected = rk === selectedRowKey
           return (
             <tr
-              key={row.ticker}
-              data-ticker={row.ticker}
-              onClick={() => onRowClick(row.ticker)}
+              key={rk}
+              data-rowkey={rk}
+              onClick={() => onRowClick(rk, row.ticker)}
               style={{
                 borderBottom: '1px solid var(--color-border-subtle)',
                 background: selected ? 'var(--color-interactive-active)' : 'transparent',
-                height: 36,
+                height: 42,
                 cursor: 'pointer'
               }}
               onMouseEnter={(e) => {

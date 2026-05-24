@@ -8,7 +8,7 @@ interface ChangeCellProps {
 
 export function ChangeCell({
   value,
-  size = 12.5,
+  size = 13.5,
   withArrow = true
 }: ChangeCellProps): ReactElement {
   if (value === null) {

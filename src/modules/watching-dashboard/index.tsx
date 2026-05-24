@@ -7,14 +7,12 @@ import { TickerDetailPanel } from './TickerDetailPanel'
 import type { WatchingRow, SortState } from './types'
 
 const WATCHING_SQL = `
-  SELECT vw.*, dc.name AS company
+  SELECT vw.*, dc.name AS company, dc.sector
   FROM view_watching vw
   JOIN dim_companies dc USING (ticker)
 `
 
 const PORTFOLIO_SQL = `SELECT ticker FROM app_portfolio`
-
-const SETTINGS_SQL = `SELECT setting_value FROM app_settings WHERE setting_key = 'watching.lastOpenedTicker'`
 
 function isStale(rows: WatchingRow[]): boolean {
   const today = new Date()
@@ -47,7 +45,6 @@ function latestUpdateTime(rows: WatchingRow[]): string | null {
 }
 
 type PortfolioRow = { ticker: string }
-type SettingsRow = { setting_value: string | null }
 
 export default function WatchingDashboard(): ReactElement {
   const { navigate } = useRouter()
@@ -62,30 +59,14 @@ export default function WatchingDashboard(): ReactElement {
   const { data: portfolioRows, refetch: refetchPortfolio } =
     useIpcQuery<PortfolioRow[]>(PORTFOLIO_SQL)
 
-  const { data: settingsRows } = useIpcQuery<SettingsRow[]>(SETTINGS_SQL)
-
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [sort, setSort] = useState<SortState>({ key: null, dir: null })
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
-  const restoredRef = useRef(false)
-
-  // Restore last-opened ticker once on first data load
-  useEffect(() => {
-    if (restoredRef.current || !settingsRows || !rows) return
-    const saved = settingsRows[0]?.setting_value
-    if (saved && rows.some((r) => r.ticker === saved)) {
-      restoredRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedTicker(saved)
-    } else if (settingsRows.length > 0) {
-      // settings loaded but no match — mark done so we don't retry forever
-      restoredRef.current = true
-    }
-  }, [settingsRows, rows])
 
   const portfolioTickers = useMemo(
     () => new Set((portfolioRows ?? []).map((r) => r.ticker)),
@@ -106,25 +87,31 @@ export default function WatchingDashboard(): ReactElement {
   // Escape to close slide-over
   useEffect(() => {
     function handleKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') setSelectedTicker(null)
+      if (e.key === 'Escape') {
+        setSelectedTicker(null)
+        setSelectedRowKey(null)
+      }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  const handleRowClick = useCallback((ticker: string) => {
-    setSelectedTicker((prev) => {
-      const next = prev === ticker ? null : ticker
-      // Persist last-opened ticker
-      if (next) {
+  const handleRowClick = useCallback(
+    (rk: string, ticker: string) => {
+      if (rk === selectedRowKey) {
+        setSelectedRowKey(null)
+        setSelectedTicker(null)
+      } else {
+        setSelectedRowKey(rk)
+        setSelectedTicker(ticker)
         void window.electronAPI.db.query(
           `INSERT INTO app_settings (setting_key, setting_value) VALUES ('watching.lastOpenedTicker', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
-          [next]
+          [ticker]
         )
       }
-      return next
-    })
-  }, [])
+    },
+    [selectedRowKey]
+  )
 
   const handleSortClick = useCallback((key: string) => {
     setSort((prev) => {
@@ -243,7 +230,6 @@ export default function WatchingDashboard(): ReactElement {
         <StatusBanner
           message="Prices are from yesterday's close."
           detail={`Last refresh: ${latestUpdateTime(rows ?? []) ?? ''}`}
-          cta={{ label: 'Refresh now', onClick: () => void handleRefresh() }}
           onDismiss={() => setBannerDismissed(true)}
         />
       )}
@@ -328,7 +314,13 @@ export default function WatchingDashboard(): ReactElement {
       </div>
 
       {/* Body: table + optional slide-over */}
-      <div className="flex flex-1 min-h-0 overflow-hidden" onClick={() => setSelectedTicker(null)}>
+      <div
+        className="flex flex-1 min-h-0 overflow-hidden"
+        onClick={() => {
+          setSelectedTicker(null)
+          setSelectedRowKey(null)
+        }}
+      >
         <div
           ref={containerRef}
           className="flex-1 min-w-0 overflow-auto"
@@ -363,7 +355,7 @@ export default function WatchingDashboard(): ReactElement {
             <WatchingTable
               rows={rows}
               portfolioTickers={portfolioTickers}
-              selectedTicker={selectedTicker}
+              selectedRowKey={selectedRowKey}
               sort={sort}
               filter={filter}
               containerWidth={containerWidth}
@@ -378,7 +370,10 @@ export default function WatchingDashboard(): ReactElement {
         {selectedTicker && rows && (
           <TickerDetailPanel
             row={rows.find((r) => r.ticker === selectedTicker)!}
-            onClose={() => setSelectedTicker(null)}
+            onClose={() => {
+              setSelectedTicker(null)
+              setSelectedRowKey(null)
+            }}
             onNavigate={navigate}
           />
         )}
