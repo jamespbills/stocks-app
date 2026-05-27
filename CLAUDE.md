@@ -105,6 +105,12 @@ Each module in `src/modules/<module-id>/` with `index.tsx` as default export. Re
 
 Modules are lazy-loaded via `React.lazy`. Never import a module directly in `app.tsx` or `router.tsx`.
 
+**Before reinventing, reach for these:**
+- `src/lib/format.ts` — `formatDate(v, 'long'|'short'|'iso')`, `formatPercent(v, { signed, digits })`. Handles the mysql2 Date-vs-string runtime quirk.
+- `src/components/QueryState.tsx` — wraps `useIpcQuery` results; pass the whole query, render with a render prop. Use this for any module's primary fetch.
+- `src/components/MutedLabel.tsx` — small uppercase muted label. `mono`/`size`/`color`/`as` props. Use instead of inlining the `fontSize/textTransform/letterSpacing` style.
+- `src/hooks/useDebouncedSave.ts` — autosave with `flush()` on blur and a "saved Ns ago" tick. Use for any notes/textarea field that persists to MySQL.
+
 ---
 
 ## 8. Shell layout (locked — do not change without explicit instruction)
