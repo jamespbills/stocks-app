@@ -1,7 +1,9 @@
 import type { ReactElement } from 'react'
 import { SlideOverPanel } from '../../components/SlideOverPanel'
+import { MutedLabel } from '../../components/MutedLabel'
 import { PlayPill } from './PlayPill'
 import { ChangeCell } from './ChangeCell'
+import { formatDate, formatPercent } from '../../lib/format'
 import type { WatchingRow } from './types'
 
 interface TickerDetailPanelProps {
@@ -12,17 +14,9 @@ interface TickerDetailPanelProps {
 
 function SectionLabel({ children }: { children: string }): ReactElement {
   return (
-    <div
-      style={{
-        fontSize: 10.5,
-        color: 'var(--color-text-muted)',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 8
-      }}
-    >
+    <MutedLabel as="div" style={{ marginBottom: 8 }}>
       {children}
-    </div>
+    </MutedLabel>
   )
 }
 
@@ -133,13 +127,6 @@ const FileIcon = (): ReactElement => (
     <polyline points="14 2 14 8 20 8" />
   </svg>
 )
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 function filingLabel(identifier: string | null): string {
   if (identifier === 'A') return 'Annual'
@@ -299,8 +286,7 @@ export function TickerDetailPanel({
                     color: row.return_6m >= 0 ? 'var(--color-up)' : 'var(--color-down)'
                   }}
                 >
-                  {row.return_6m >= 0 ? '+' : ''}
-                  {(row.return_6m * 100).toFixed(1)}%
+                  {formatPercent(row.return_6m, { signed: true })}
                 </span>
               </div>
             )}

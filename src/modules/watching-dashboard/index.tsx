@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, type ReactElement } 
 import { useIpcQuery } from '../../hooks/useIpcQuery'
 import { useRouter } from '../../hooks/use-router'
 import { StatusBanner } from '../../components/StatusBanner'
+import { QueryState } from '../../components/QueryState'
 import { WatchingTable } from './WatchingTable'
 import { TickerDetailPanel } from './TickerDetailPanel'
 import type { WatchingRow, SortState } from './types'
@@ -49,12 +50,8 @@ type PortfolioRow = { ticker: string }
 export default function WatchingDashboard(): ReactElement {
   const { navigate } = useRouter()
 
-  const {
-    data: rows,
-    loading,
-    error,
-    refetch: refetchWatching
-  } = useIpcQuery<WatchingRow[]>(WATCHING_SQL)
+  const watchingQuery = useIpcQuery<WatchingRow[]>(WATCHING_SQL)
+  const { data: rows, loading, refetch: refetchWatching } = watchingQuery
 
   const { data: portfolioRows, refetch: refetchPortfolio } =
     useIpcQuery<PortfolioRow[]>(PORTFOLIO_SQL)
@@ -327,44 +324,22 @@ export default function WatchingDashboard(): ReactElement {
           style={{ padding: '0 20px' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {loading && (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--color-text-muted)',
-                fontSize: 13
-              }}
-            >
-              Loading…
-            </div>
-          )}
-          {error && (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--color-danger)',
-                fontSize: 13
-              }}
-            >
-              Error: {error}
-            </div>
-          )}
-          {!loading && !error && rows && (
-            <WatchingTable
-              rows={rows}
-              portfolioTickers={portfolioTickers}
-              selectedRowKey={selectedRowKey}
-              sort={sort}
-              filter={filter}
-              containerWidth={containerWidth}
-              slideOverOpen={selectedTicker !== null}
-              onRowClick={handleRowClick}
-              onSortClick={handleSortClick}
-              onPortfolioToggle={(t) => void handlePortfolioToggle(t)}
-            />
-          )}
+          <QueryState query={watchingQuery}>
+            {(tableRows) => (
+              <WatchingTable
+                rows={tableRows}
+                portfolioTickers={portfolioTickers}
+                selectedRowKey={selectedRowKey}
+                sort={sort}
+                filter={filter}
+                containerWidth={containerWidth}
+                slideOverOpen={selectedTicker !== null}
+                onRowClick={handleRowClick}
+                onSortClick={handleSortClick}
+                onPortfolioToggle={(t) => void handlePortfolioToggle(t)}
+              />
+            )}
+          </QueryState>
         </div>
 
         {selectedTicker && rows && (

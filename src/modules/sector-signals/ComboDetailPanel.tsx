@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useCallback, type ReactElement } from 'react'
+import { useState, useCallback, type ReactElement } from 'react'
 import type { ComboDetail, Strategy } from './types'
 import { SignalBadge } from './SignalBadge'
 import { UPSERT_COMBO_NOTE_SQL, UPSERT_TICKER_NOTE_SQL } from './queries'
+import { formatDate, formatPercent } from '../../lib/format'
+import { MutedLabel } from '../../components/MutedLabel'
+import { useDebouncedSave } from '../../hooks/useDebouncedSave'
 
 interface ComboDetailPanelProps {
   detail: ComboDetail
@@ -11,21 +14,9 @@ interface ComboDetailPanelProps {
   onTickerNoteChange: (ticker: string, note: string) => void
 }
 
-function formatRoi(roi: number | null): string {
-  if (roi === null) return '—'
-  return `${(roi * 100).toFixed(1)}%`
-}
-
 function roiColor(roi: number | null): string {
   if (roi === null) return 'var(--color-text-muted)'
   return roi > 0 ? 'var(--color-up)' : 'var(--color-down)'
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '—'
-  return d.toISOString().slice(0, 10)
 }
 
 function computeWinRate(tickers: ComboDetail['tickers']): number | null {
@@ -55,58 +46,26 @@ export function ComboDetailPanel({
   onNoteChange,
   onTickerNoteChange
 }: ComboDetailPanelProps): ReactElement {
-  const [noteValue, setNoteValue] = useState(detail.comboNote)
-  const [savedSecondsAgo, setSavedSecondsAgo] = useState<number | null>(null)
   const [editingNote, setEditingNote] = useState<EditingTickerNote | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const savedAtRef = useRef<number | null>(null)
 
-  // Tick "saved N seconds ago" — starts once a save is recorded, runs until component unmounts
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (savedAtRef.current === null) return
-      const secs = Math.round((Date.now() - savedAtRef.current) / 1000)
-      setSavedSecondsAgo(secs)
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleNoteInput = useCallback(
-    (value: string) => {
-      setNoteValue(value)
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        window.electronAPI.db
-          .query(UPSERT_COMBO_NOTE_SQL, [strategy, detail.sector, detail.criterionCode, value])
-          .then(() => {
-            savedAtRef.current = Date.now()
-            setSavedSecondsAgo(0)
-            onNoteChange(value)
-          })
-          .catch(() => {
-            /* silent — autosave; user can retry on blur */
-          })
-      }, 400)
-    },
-    [strategy, detail.sector, detail.criterionCode, onNoteChange]
-  )
-
-  const handleNoteBlur = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-      debounceRef.current = null
+  const {
+    value: noteValue,
+    setValue: setNoteValue,
+    flush: flushNote,
+    savedSecondsAgo
+  } = useDebouncedSave<string>({
+    initialValue: detail.comboNote,
+    delayMs: 400,
+    onSave: async (value) => {
+      await window.electronAPI.db.query(UPSERT_COMBO_NOTE_SQL, [
+        strategy,
+        detail.sector,
+        detail.criterionCode,
+        value
+      ])
+      onNoteChange(value)
     }
-    window.electronAPI.db
-      .query(UPSERT_COMBO_NOTE_SQL, [strategy, detail.sector, detail.criterionCode, noteValue])
-      .then(() => {
-        savedAtRef.current = Date.now()
-        setSavedSecondsAgo(0)
-        onNoteChange(noteValue)
-      })
-      .catch(() => {
-        /* silent */
-      })
-  }, [strategy, detail.sector, detail.criterionCode, noteValue, onNoteChange])
+  })
 
   const commitTickerNote = useCallback(
     (ticker: string, note: string) => {
@@ -241,34 +200,21 @@ export function ComboDetailPanel({
                 lineHeight: 1
               }}
             >
-              {formatRoi(detail.avgRoi)}
+              {formatPercent(detail.avgRoi)}
             </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-            >
+            <MutedLabel mono size="var(--text-xs)">
               avg ROI
-            </span>
+            </MutedLabel>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <SignalBadge kind={detail.signalStrength} />
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10.5,
-                color: detail.isActive ? 'var(--color-up)' : 'var(--color-text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
+            <MutedLabel
+              mono
+              color={detail.isActive ? 'var(--color-up)' : 'var(--color-text-muted)'}
             >
               {detail.isActive ? 'active' : 'inactive'}
-            </span>
+            </MutedLabel>
           </div>
         </div>
 
@@ -292,17 +238,9 @@ export function ComboDetailPanel({
             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-2)' }}
           >
             <div style={statCardStyle}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <MutedLabel mono size={10}>
                 Tickers
-              </span>
+              </MutedLabel>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -316,17 +254,9 @@ export function ComboDetailPanel({
             </div>
 
             <div style={statCardStyle}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <MutedLabel mono size={10}>
                 Win Rate
-              </span>
+              </MutedLabel>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -343,17 +273,9 @@ export function ComboDetailPanel({
             </div>
 
             <div style={statCardStyle}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <MutedLabel mono size={10}>
                 Median ROI
-              </span>
+              </MutedLabel>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -362,7 +284,7 @@ export function ComboDetailPanel({
                   color: roiColor(medianRoi)
                 }}
               >
-                {formatRoi(medianRoi)}
+                {formatPercent(medianRoi)}
               </span>
             </div>
           </div>
@@ -370,22 +292,14 @@ export function ComboDetailPanel({
 
         {/* Combo note */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--color-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}
-          >
+          <MutedLabel mono size={10}>
             Combo Note
-          </span>
+          </MutedLabel>
           <div style={{ position: 'relative' }}>
             <textarea
               value={noteValue}
-              onChange={(e) => handleNoteInput(e.target.value)}
-              onBlur={handleNoteBlur}
+              onChange={(e) => setNoteValue(e.target.value)}
+              onBlur={flushNote}
               placeholder="Add a note about this combo…"
               rows={3}
               style={{
@@ -431,17 +345,9 @@ export function ComboDetailPanel({
 
         {/* Ticker table */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--color-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}
-          >
+          <MutedLabel mono size={10}>
             Reports ({detail.tickers.length})
-          </span>
+          </MutedLabel>
 
           {detail.tickers.length === 0 ? (
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
@@ -467,18 +373,9 @@ export function ComboDetailPanel({
                 }}
               >
                 {['TICKER', 'RETURN', 'DATE', 'NOTE'].map((col) => (
-                  <span
-                    key={col}
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
-                      color: 'var(--color-text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}
-                  >
+                  <MutedLabel key={col} mono size={10}>
                     {col}
-                  </span>
+                  </MutedLabel>
                 ))}
               </div>
 
@@ -521,7 +418,7 @@ export function ComboDetailPanel({
                         paddingRight: 4
                       }}
                     >
-                      {formatRoi(t.roi)}
+                      {formatPercent(t.roi)}
                     </span>
 
                     <span
@@ -531,7 +428,7 @@ export function ComboDetailPanel({
                         color: 'var(--color-text-muted)'
                       }}
                     >
-                      {formatDate(t.reportDate)}
+                      {formatDate(t.reportDate, 'iso')}
                     </span>
 
                     {/* Note — click to edit inline */}
