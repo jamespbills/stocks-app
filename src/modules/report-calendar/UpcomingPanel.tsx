@@ -1,4 +1,6 @@
 import type { ReactElement } from 'react'
+import { MutedLabel } from '../../components/MutedLabel'
+import { formatDate } from '../../lib/format'
 import type { CalendarEntry } from './types'
 
 interface UpcomingPanelProps {
@@ -6,24 +8,14 @@ interface UpcomingPanelProps {
 }
 
 function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '?'
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return formatDate(dateStr, 'short', '?')
 }
 
 function SectionLabel({ children }: { children: string }): ReactElement {
   return (
-    <div
-      style={{
-        padding: '8px 16px 4px',
-        fontSize: 10.5,
-        color: 'var(--color-text-muted)',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5
-      }}
-    >
+    <MutedLabel as="div" style={{ padding: '8px 16px 4px' }}>
       {children}
-    </div>
+    </MutedLabel>
   )
 }
 

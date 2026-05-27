@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useMemo, type ReactElement } from 'react'
 import { PlayPill } from './PlayPill'
 import { ChangeCell } from './ChangeCell'
+import { formatDate } from '../../lib/format'
 import type { WatchingRow, SortState } from './types'
 
 interface ColDef {
@@ -34,13 +35,6 @@ interface WatchingTableProps {
   onRowClick: (rk: string, ticker: string) => void
   onSortClick: (key: string) => void
   onPortfolioToggle: (ticker: string) => void
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function isSectorPlay(row: WatchingRow): boolean {
