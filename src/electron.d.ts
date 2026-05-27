@@ -15,6 +15,7 @@ declare global {
     electronAPI: {
       db: {
         query: (sql: string, params?: unknown[]) => Promise<unknown[]>
+        callProc: (name: string) => Promise<{ ok: true }>
         onStatus: (cb: (status: DBStatus) => void) => () => void
       }
       fs: {

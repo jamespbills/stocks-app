@@ -229,7 +229,13 @@ export function WatchingTable({
       case 'play':
         return (
           <td key={col.key} style={cellStyle}>
-            <PlayPill score={row.play} maxScore={13} />
+            <PlayPill
+              score={row.play}
+              maxScore={13}
+              sectorPlay={(row.play_sector_rating ?? 0) > 0}
+              sectorName={row.sector}
+              missedCriterion={row.missed_upon}
+            />
           </td>
         )
       case 'play_2':

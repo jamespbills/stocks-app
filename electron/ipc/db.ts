@@ -43,4 +43,10 @@ export function registerDBHandlers(): void {
     const [rows] = await pool.execute(sql, (params ?? []) as ExecuteValues)
     return rows
   })
+
+  ipcMain.handle('db:callProc', async (_, { name }: { name: string }) => {
+    if (!pool) throw new Error('Database not initialised')
+    await pool.query(`CALL ${name}()`)
+    return { ok: true }
+  })
 }

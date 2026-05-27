@@ -8,6 +8,7 @@ export interface DBStatus {
 contextBridge.exposeInMainWorld('electronAPI', {
   db: {
     query: (sql: string, params?: unknown[]) => ipcRenderer.invoke('db:query', { sql, params }),
+    callProc: (name: string) => ipcRenderer.invoke('db:callProc', { name }),
     onStatus: (cb: (status: DBStatus) => void) => {
       const handler = (_: Electron.IpcRendererEvent, status: DBStatus): void => cb(status)
       ipcRenderer.on('db:status', handler)
