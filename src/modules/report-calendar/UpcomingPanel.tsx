@@ -17,9 +17,9 @@ function formatShortDate(dateStr: string): string {
   return formatDate(dateStr, 'short', '?')
 }
 
-function SectionLabel({ children }: { children: string }): ReactElement {
+function SectionLabel({ children, color }: { children: string; color?: string }): ReactElement {
   return (
-    <MutedLabel as="div" style={{ padding: '8px 16px 4px' }}>
+    <MutedLabel as="div" style={{ padding: '8px 16px 4px', ...(color ? { color } : {}) }}>
       {children}
     </MutedLabel>
   )
@@ -152,12 +152,14 @@ export function UpcomingPanel({
   onNavigate,
   onDisregardEntry
 }: UpcomingPanelProps): ReactElement {
-  const overdue = entries
-    .filter((e) => e.status === 'overdue')
+  const missed = entries
+    .filter((e) => e.days_to_go < 0)
     .sort((a, b) => a.days_to_go - b.days_to_go)
 
+  const today = entries.filter((e) => e.days_to_go === 0)
+
   const upcoming = entries
-    .filter((e) => e.status !== 'overdue' && e.status !== 'released')
+    .filter((e) => e.days_to_go > 0)
     .sort((a, b) => a.days_to_go - b.days_to_go)
 
   function isActive(e: CalendarEntry): boolean {
@@ -203,15 +205,15 @@ export function UpcomingPanel({
             color: 'var(--color-text-muted)'
           }}
         >
-          {overdue.length > 0 ? `${overdue.length} overdue` : 'next 30 days'}
+          {missed.length > 0 ? `${missed.length} missed` : 'next 30 days'}
         </span>
       </div>
 
       <div style={{ overflowY: 'auto', flex: 1, padding: '6px 0' }}>
-        {overdue.length > 0 && (
+        {missed.length > 0 && (
           <>
-            <SectionLabel>{`Overdue (${overdue.length})`}</SectionLabel>
-            {overdue.map((e) => (
+            <SectionLabel color="var(--color-danger)">{`MISSED (${missed.length})`}</SectionLabel>
+            {missed.map((e) => (
               <UpcomingRow
                 key={e.ticker}
                 entry={e}
@@ -225,14 +227,31 @@ export function UpcomingPanel({
             <div style={{ height: 6 }} />
           </>
         )}
-        {upcoming.length > 0 && (
+        {today.length > 0 && (
           <>
-            <SectionLabel>Upcoming</SectionLabel>
-            {upcoming.map((e, i) => (
+            <SectionLabel color="var(--color-warning)">TODAY</SectionLabel>
+            {today.map((e) => (
               <UpcomingRow
                 key={e.ticker}
                 entry={e}
-                highlight={i === 0}
+                highlight
+                active={isActive(e)}
+                onClick={(ev) => onEntryClick(e.date, e.ticker, ev)}
+                onDismiss={onDismissPopover}
+                onNavigate={onNavigate}
+                onDisregard={() => onDisregardEntry(e)}
+              />
+            ))}
+            <div style={{ height: 6 }} />
+          </>
+        )}
+        {upcoming.length > 0 && (
+          <>
+            <SectionLabel>UPCOMING</SectionLabel>
+            {upcoming.map((e) => (
+              <UpcomingRow
+                key={e.ticker}
+                entry={e}
                 active={isActive(e)}
                 onClick={(ev) => onEntryClick(e.date, e.ticker, ev)}
                 onDismiss={onDismissPopover}
@@ -242,7 +261,7 @@ export function UpcomingPanel({
             ))}
           </>
         )}
-        {overdue.length === 0 && upcoming.length === 0 && (
+        {missed.length === 0 && today.length === 0 && upcoming.length === 0 && (
           <div
             style={{
               padding: 24,
