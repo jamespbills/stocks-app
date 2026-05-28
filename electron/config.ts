@@ -22,6 +22,10 @@ export interface AppConfig {
     aiReviews: string
     databaseProject: string
   }
+  apiKeys: {
+    finnhub: string
+    fmp: string
+  }
   scripts: ScriptDefinition[]
 }
 
@@ -61,6 +65,8 @@ export function loadConfig(): AppConfig {
   if (!paths.databaseProject)
     throw new Error('config.local.json: paths.databaseProject is required')
 
+  const apiKeysRaw = (cfg.apiKeys as Record<string, unknown> | undefined) ?? {}
+
   _config = {
     mysql: {
       host: String(mysql.host),
@@ -72,6 +78,10 @@ export function loadConfig(): AppConfig {
     paths: {
       aiReviews: String(paths.aiReviews ?? ''),
       databaseProject: String(paths.databaseProject)
+    },
+    apiKeys: {
+      finnhub: String(apiKeysRaw.finnhub ?? ''),
+      fmp: String(apiKeysRaw.fmp ?? '')
     },
     scripts: Array.isArray(cfg.scripts) ? (cfg.scripts as ScriptDefinition[]) : []
   }

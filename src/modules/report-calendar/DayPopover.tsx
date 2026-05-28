@@ -6,6 +6,7 @@ import type { CalendarEntry, EntryStatus } from './types'
 interface DayPopoverProps {
   date: string
   entries: CalendarEntry[]
+  anchorEl: HTMLElement | null
   onDismiss: () => void
   onEntryClick: (ticker: string) => void
 }
@@ -27,11 +28,12 @@ function formatDayLabel(dateStr: string, count: number): string {
 export function DayPopover({
   date,
   entries,
+  anchorEl,
   onDismiss,
   onEntryClick
 }: DayPopoverProps): ReactElement {
   return (
-    <Popover onDismiss={onDismiss} width={220}>
+    <Popover onDismiss={onDismiss} anchorEl={anchorEl} width={220}>
       <div
         style={{
           fontSize: 10.5,

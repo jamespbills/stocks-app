@@ -12,6 +12,7 @@ import { useRouter } from '../../hooks/use-router'
 import { CalendarGrid } from './CalendarGrid'
 import { UpcomingPanel } from './UpcomingPanel'
 import { DateOverridesModal } from './DateOverridesModal'
+import { ScriptsModal, type ScriptsModalInitial } from './ScriptsModal'
 import { rowToEntry } from './types'
 import type { CalendarRow, CalendarEntry, PopoverState } from './types'
 
@@ -89,6 +90,8 @@ export default function ReportCalendar(): ReactElement {
   const [panelVisible, setPanelVisible] = useState(true)
   const [popover, setPopover] = useState<PopoverState>(null)
   const [overridesOpen, setOverridesOpen] = useState(false)
+  const [scriptsOpen, setScriptsOpen] = useState(false)
+  const [scriptsInitial, setScriptsInitial] = useState<ScriptsModalInitial | undefined>(undefined)
   const settingsRestoredRef = useRef(false)
 
   // Restore panel visibility from settings (one-time on first load)
@@ -141,14 +144,32 @@ export default function ReportCalendar(): ReactElement {
     setPopover(null)
   }, [])
 
-  const handleEntryClick = useCallback((date: string, ticker: string, e: React.MouseEvent) => {
+  const handleGridEntryClick = useCallback((date: string, ticker: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setPopover((prev) =>
-      prev?.kind === 'entry' && prev.date === date && prev.ticker === ticker
+      prev?.kind === 'entry' &&
+      prev.source === 'grid' &&
+      prev.date === date &&
+      prev.ticker === ticker
         ? null
-        : { kind: 'entry', date, ticker }
+        : { kind: 'entry', source: 'grid', date, ticker }
     )
   }, [])
+
+  const handleUpcomingEntryClick = useCallback(
+    (date: string, ticker: string, e: React.MouseEvent) => {
+      e.stopPropagation()
+      setPopover((prev) =>
+        prev?.kind === 'entry' &&
+        prev.source === 'upcoming' &&
+        prev.date === date &&
+        prev.ticker === ticker
+          ? null
+          : { kind: 'entry', source: 'upcoming', date, ticker }
+      )
+    },
+    []
+  )
 
   const handleDayClick = useCallback((date: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -163,6 +184,27 @@ export default function ReportCalendar(): ReactElement {
     refetchCalendar()
     refetchOverridesCount()
   }, [refetchCalendar, refetchOverridesCount])
+
+  const handleScriptsMutate = useCallback(() => {
+    refetchCalendar()
+  }, [refetchCalendar])
+
+  const handleDisregardEntry = useCallback((entry: CalendarEntry) => {
+    setPopover(null)
+    setScriptsInitial({
+      section: 'disregard',
+      ticker: entry.ticker,
+      year: entry.date.slice(0, 4),
+      filing: entry.expectedFiling ?? 'A',
+      date: entry.date
+    })
+    setScriptsOpen(true)
+  }, [])
+
+  const handleScriptsClose = useCallback(() => {
+    setScriptsOpen(false)
+    setScriptsInitial(undefined)
+  }, [])
 
   // Derive all calendar entries from DB rows
   const allEntries = useMemo<CalendarEntry[]>(() => {
@@ -355,6 +397,29 @@ export default function ReportCalendar(): ReactElement {
           </button>
 
           <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setScriptsInitial(undefined)
+              setScriptsOpen(true)
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 10px',
+              borderRadius: 5,
+              border: '1px solid var(--color-border-strong)',
+              background: 'transparent',
+              color: 'var(--color-text-secondary)',
+              fontSize: 12.5,
+              cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}
+          >
+            Scripts
+          </button>
+
+          <button
             onClick={togglePanel}
             style={{
               display: 'inline-flex',
@@ -382,19 +447,37 @@ export default function ReportCalendar(): ReactElement {
           month={nav.month}
           entriesByDate={entriesByDate}
           popover={popover}
-          onEntryClick={handleEntryClick}
+          onEntryClick={handleGridEntryClick}
           onDayClick={handleDayClick}
           onDismissPopover={dismissPopover}
           onNavigate={navigate}
+          onDisregardEntry={handleDisregardEntry}
         />
 
-        {panelVisible && <UpcomingPanel entries={upcomingEntries} />}
+        {panelVisible && (
+          <UpcomingPanel
+            entries={upcomingEntries}
+            popover={popover}
+            onEntryClick={handleUpcomingEntryClick}
+            onDismissPopover={dismissPopover}
+            onNavigate={navigate}
+            onDisregardEntry={handleDisregardEntry}
+          />
+        )}
       </div>
 
       {overridesOpen && (
         <DateOverridesModal
           onClose={() => setOverridesOpen(false)}
           onMutate={handleOverrideMutate}
+        />
+      )}
+
+      {scriptsOpen && (
+        <ScriptsModal
+          onClose={handleScriptsClose}
+          onMutate={handleScriptsMutate}
+          initial={scriptsInitial}
         />
       )}
     </div>

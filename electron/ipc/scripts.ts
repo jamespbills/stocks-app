@@ -55,10 +55,10 @@ export function registerScriptHandlers(): void {
     if (child) child.kill('SIGTERM')
   })
 
-  ipcMain.handle('scripts:launchBuiltin', (_, name: string): number => {
+  ipcMain.handle('scripts:launchBuiltin', (_, name: string, args: string[] = []): number => {
     const config = loadConfig()
     const scriptPath = join(app.getAppPath(), 'scripts', `${name}.py`)
-    const child = spawn('python', [scriptPath], {
+    const child = spawn('python', [scriptPath, ...args], {
       stdio: 'pipe',
       env: {
         ...process.env,
@@ -66,7 +66,10 @@ export function registerScriptHandlers(): void {
         DB_PORT: String(config.mysql.port),
         DB_USER: config.mysql.user,
         DB_PASSWORD: config.mysql.password,
-        DB_NAME: config.mysql.database
+        DB_NAME: config.mysql.database,
+        FINNHUB_API_KEY: config.apiKeys.finnhub,
+        FMP_API_KEY: config.apiKeys.fmp,
+        PYTHONIOENCODING: 'utf-8'
       }
     })
     const pid = child.pid!

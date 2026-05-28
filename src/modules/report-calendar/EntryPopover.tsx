@@ -4,8 +4,10 @@ import type { CalendarEntry, EntryStatus } from './types'
 
 interface EntryPopoverProps {
   entry: CalendarEntry
+  anchorEl: HTMLElement | null
   onDismiss: () => void
   onNavigate: (moduleId: string) => void
+  onDisregard: () => void
 }
 
 function statusLabel(status: EntryStatus, daysToGo: number): string {
@@ -21,9 +23,15 @@ function statusColor(status: EntryStatus): string {
   return 'var(--color-text-muted)'
 }
 
-export function EntryPopover({ entry, onDismiss, onNavigate }: EntryPopoverProps): ReactElement {
+export function EntryPopover({
+  entry,
+  anchorEl,
+  onDismiss,
+  onNavigate,
+  onDisregard
+}: EntryPopoverProps): ReactElement {
   return (
-    <Popover onDismiss={onDismiss} width={240}>
+    <Popover onDismiss={onDismiss} anchorEl={anchorEl} width={240}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span
           style={{
@@ -142,6 +150,32 @@ export function EntryPopover({ entry, onDismiss, onNavigate }: EntryPopoverProps
           Watching
         </button>
       </div>
+      {entry.status !== 'released' && (
+        <button
+          onClick={() => {
+            onDisregard()
+          }}
+          style={{
+            marginTop: 10,
+            width: '100%',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '5px 8px',
+            borderRadius: 5,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--color-text-muted)',
+            fontSize: 11.5,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textDecoration: 'underline',
+            textUnderlineOffset: 2
+          }}
+        >
+          Disregard this report
+        </button>
+      )}
     </Popover>
   )
 }

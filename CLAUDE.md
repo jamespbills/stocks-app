@@ -91,7 +91,7 @@ If verification fails after 3 attempts, stop. Report: what you tried, the failin
 - **Never hardcode file paths.** All external paths come from `config.local.json` → `AppConfig`. Never fall back to a hardcoded string.
 - **Never commit `config.local.json`.** It is git-ignored. Never put real credentials in `config.example.json`.
 - **No SQLite.** All app state in `new_stocks_db` (`app_*` tables). No exceptions.
-- **No new backend service.** No Express, no Flask, no localhost API. Subprocess calls go via IPC only: `scripts:launch` for user-defined scripts from config, `scripts:launchBuiltin(name)` for app-local scripts in `stock-app/scripts/` (resolves path from `app.getAppPath()`, injects DB credentials as env vars automatically).
+- **No new backend service.** No Express, no Flask, no localhost API. Subprocess calls go via IPC only: `scripts:launch` for user-defined scripts from config, `scripts:launchBuiltin(name, args?)` for app-local scripts in `stock-app/scripts/` (resolves path from `app.getAppPath()`, injects DB credentials + `FINNHUB_API_KEY` + `FMP_API_KEY` as env vars automatically; optional `args[]` are passed positionally to the script).
 - **No ORM.** Direct mysql2 only. Do not install Prisma, Drizzle, Sequelize, or TypeORM.
 - **No light mode.** Dark only. Do not add a theme toggle.
 - **Never modify files in `Database Project\`.** Read-only reference.
@@ -109,6 +109,7 @@ Modules are lazy-loaded via `React.lazy`. Never import a module directly in `app
 - `src/lib/format.ts` — `formatDate(v, 'long'|'short'|'iso')`, `formatPercent(v, { signed, digits })`. Handles the mysql2 Date-vs-string runtime quirk.
 - `src/components/QueryState.tsx` — wraps `useIpcQuery` results; pass the whole query, render with a render prop. Use this for any module's primary fetch.
 - `src/components/MutedLabel.tsx` — small uppercase muted label. `mono`/`size`/`color`/`as` props. Use instead of inlining the `fontSize/textTransform/letterSpacing` style.
+- `src/components/Popover.tsx` — portal-based popover with viewport-aware positioning. Pass `anchorEl: HTMLElement | null` and `onDismiss`; the popover renders into `document.body`, positions itself fixed relative to the anchor, flips to the anchor's left when right placement would clip the viewport, and clamps vertically to stay on-screen. Use for any floating UI anchored to an element that may sit inside an `overflow: hidden` container.
 - `src/hooks/useDebouncedSave.ts` — autosave with `flush()` on blur and a "saved Ns ago" tick. Use for any notes/textarea field that persists to MySQL.
 
 ---
@@ -151,7 +152,10 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - *(When Claude sorts or compares a mysql2 DATE column, remind it: the value is a JS `Date` object at runtime, not a string. Use `instanceof Date` / `.getTime()` — never `String(v).localeCompare()`.)*
 - *(When Claude calls `.toISOString()` on a mysql2 Date value for display or storage, remind it: `.toISOString()` is UTC-only and will be off by one day in BST. Use `formatDate(value, 'iso')` from `src/lib/format.ts` — see §7.)*
 - *(When Claude uses `ticker` as a React key or selection identity in a table, remind it: ticker is not unique — `view_watching` can return multiple rows per ticker. Use a composite `rowKey` — see `tasks/lessons.md`.)*
-- *(When calling `scripts:launch`, the first arg is the script file path — not `'python'`. The handler hardcodes `python` as the executable: `spawn('python', [scriptPath, ...args])`. For app-local scripts in `stock-app/scripts/`, use `scripts:launchBuiltin('name')` instead — it resolves the path and injects DB creds as env vars.)*
+- *(When calling `scripts:launch`, the first arg is the script file path — not `'python'`. The handler hardcodes `python` as the executable: `spawn('python', [scriptPath, ...args])`. For app-local scripts in `stock-app/scripts/`, use `scripts:launchBuiltin(name, args?)` instead — it resolves the path and injects DB creds + API keys as env vars.)*
+- *(When Claude reads `ref.current` directly in a component's render body, remind it: `react-hooks/refs-during-render` blocks this. Use a ref **callback** that updates `useState` (`<div ref={setEl} />`), or for per-key collections keep a `useRef<Map>` for assignment and sync the active element into state via `useLayoutEffect`. See `tasks/lessons.md`.)*
+- *(When Claude places a popover/tooltip with `position: absolute` inside a `DayCell`-style cell or any container with `overflow: hidden`, remind it: the popover will be silently clipped to nothing. Use `src/components/Popover.tsx` — it portals to body and positions itself viewport-aware.)*
+- *(When Claude uses a bare `window.addEventListener('click', dismiss)` for outside-click handling, remind it: React's `e.stopPropagation()` does NOT stop native bubbling to `window`. The window handler must check `popoverEl.contains(e.target)` before dismissing, or every click inside the popover will also close it.)*
 
 ---
 

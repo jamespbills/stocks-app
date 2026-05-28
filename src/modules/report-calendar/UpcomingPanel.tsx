@@ -1,10 +1,16 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { MutedLabel } from '../../components/MutedLabel'
 import { formatDate } from '../../lib/format'
-import type { CalendarEntry } from './types'
+import { EntryPopover } from './EntryPopover'
+import type { CalendarEntry, PopoverState } from './types'
 
 interface UpcomingPanelProps {
   entries: CalendarEntry[]
+  popover: PopoverState
+  onEntryClick: (date: string, ticker: string, e: React.MouseEvent) => void
+  onDismissPopover: () => void
+  onNavigate: (moduleId: string) => void
+  onDisregardEntry: (entry: CalendarEntry) => void
 }
 
 function formatShortDate(dateStr: string): string {
@@ -22,9 +28,24 @@ function SectionLabel({ children }: { children: string }): ReactElement {
 interface UpcomingRowProps {
   entry: CalendarEntry
   highlight?: boolean
+  active: boolean
+  onClick: (e: React.MouseEvent) => void
+  onDismiss: () => void
+  onNavigate: (moduleId: string) => void
+  onDisregard: () => void
 }
 
-function UpcomingRow({ entry, highlight = false }: UpcomingRowProps): ReactElement {
+function UpcomingRow({
+  entry,
+  highlight = false,
+  active,
+  onClick,
+  onDismiss,
+  onNavigate,
+  onDisregard
+}: UpcomingRowProps): ReactElement {
+  const [rowEl, setRowEl] = useState<HTMLDivElement | null>(null)
+
   let dateColor = 'var(--color-text-muted)'
   if (entry.status === 'overdue') dateColor = 'var(--color-danger)'
   else if (entry.status === 'amber') dateColor = 'var(--color-warning)'
@@ -38,6 +59,8 @@ function UpcomingRow({ entry, highlight = false }: UpcomingRowProps): ReactEleme
 
   return (
     <div
+      ref={setRowEl}
+      onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -45,8 +68,16 @@ function UpcomingRow({ entry, highlight = false }: UpcomingRowProps): ReactEleme
         padding: '6px 16px',
         paddingLeft: highlight ? 14 : 16,
         cursor: 'pointer',
-        background: highlight ? 'var(--color-interactive-hover)' : 'transparent',
-        borderLeft: highlight ? '2px solid var(--color-border-focus)' : '2px solid transparent'
+        background: active
+          ? 'var(--color-interactive-active)'
+          : highlight
+            ? 'var(--color-interactive-hover)'
+            : 'transparent',
+        borderLeft: active
+          ? '2px solid var(--color-border-focus)'
+          : highlight
+            ? '2px solid var(--color-border-focus)'
+            : '2px solid transparent'
       }}
     >
       <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -100,11 +131,27 @@ function UpcomingRow({ entry, highlight = false }: UpcomingRowProps): ReactEleme
           {daysLabel}
         </div>
       </div>
+      {active && (
+        <EntryPopover
+          entry={entry}
+          anchorEl={rowEl}
+          onDismiss={onDismiss}
+          onNavigate={onNavigate}
+          onDisregard={onDisregard}
+        />
+      )}
     </div>
   )
 }
 
-export function UpcomingPanel({ entries }: UpcomingPanelProps): ReactElement {
+export function UpcomingPanel({
+  entries,
+  popover,
+  onEntryClick,
+  onDismissPopover,
+  onNavigate,
+  onDisregardEntry
+}: UpcomingPanelProps): ReactElement {
   const overdue = entries
     .filter((e) => e.status === 'overdue')
     .sort((a, b) => a.days_to_go - b.days_to_go)
@@ -112,6 +159,15 @@ export function UpcomingPanel({ entries }: UpcomingPanelProps): ReactElement {
   const upcoming = entries
     .filter((e) => e.status !== 'overdue' && e.status !== 'released')
     .sort((a, b) => a.days_to_go - b.days_to_go)
+
+  function isActive(e: CalendarEntry): boolean {
+    return (
+      popover?.kind === 'entry' &&
+      popover.source === 'upcoming' &&
+      popover.date === e.date &&
+      popover.ticker === e.ticker
+    )
+  }
 
   return (
     <div
@@ -156,7 +212,15 @@ export function UpcomingPanel({ entries }: UpcomingPanelProps): ReactElement {
           <>
             <SectionLabel>{`Overdue (${overdue.length})`}</SectionLabel>
             {overdue.map((e) => (
-              <UpcomingRow key={e.ticker} entry={e} />
+              <UpcomingRow
+                key={e.ticker}
+                entry={e}
+                active={isActive(e)}
+                onClick={(ev) => onEntryClick(e.date, e.ticker, ev)}
+                onDismiss={onDismissPopover}
+                onNavigate={onNavigate}
+                onDisregard={() => onDisregardEntry(e)}
+              />
             ))}
             <div style={{ height: 6 }} />
           </>
@@ -165,7 +229,16 @@ export function UpcomingPanel({ entries }: UpcomingPanelProps): ReactElement {
           <>
             <SectionLabel>Upcoming</SectionLabel>
             {upcoming.map((e, i) => (
-              <UpcomingRow key={e.ticker} entry={e} highlight={i === 0} />
+              <UpcomingRow
+                key={e.ticker}
+                entry={e}
+                highlight={i === 0}
+                active={isActive(e)}
+                onClick={(ev) => onEntryClick(e.date, e.ticker, ev)}
+                onDismiss={onDismissPopover}
+                onNavigate={onNavigate}
+                onDisregard={() => onDisregardEntry(e)}
+              />
             ))}
           </>
         )}

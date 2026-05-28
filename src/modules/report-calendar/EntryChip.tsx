@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { forwardRef, type ReactElement } from 'react'
 import type { EntryStatus } from './types'
 
 interface EntryChipProps {
@@ -39,18 +39,14 @@ function chipStyle(
   return { bg, color, border }
 }
 
-export function EntryChip({
-  ticker,
-  period,
-  status,
-  selected = false,
-  size = 'normal',
-  hasOverride = false,
-  onClick
-}: EntryChipProps): ReactElement {
+export const EntryChip = forwardRef<HTMLDivElement, EntryChipProps>(function EntryChip(
+  { ticker, period, status, selected = false, size = 'normal', hasOverride = false, onClick },
+  ref
+): ReactElement {
   const { bg, color, border } = chipStyle(status, selected)
   return (
     <div
+      ref={ref}
       onClick={onClick}
       style={{
         display: 'flex',
@@ -87,4 +83,4 @@ export function EntryChip({
       )}
     </div>
   )
-}
+})

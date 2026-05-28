@@ -15,6 +15,7 @@ interface CalendarGridProps {
   onDayClick: (date: string, e: React.MouseEvent) => void
   onDismissPopover: () => void
   onNavigate: (moduleId: string) => void
+  onDisregardEntry: (entry: CalendarEntry) => void
 }
 
 export function CalendarGrid({
@@ -25,7 +26,8 @@ export function CalendarGrid({
   onEntryClick,
   onDayClick,
   onDismissPopover,
-  onNavigate
+  onNavigate,
+  onDisregardEntry
 }: CalendarGridProps): ReactElement {
   const cells = buildMonthGrid(year, month)
   const rows: (typeof cells)[] = []
@@ -109,6 +111,7 @@ export function CalendarGrid({
                   onDayClick={onDayClick}
                   onDismissPopover={onDismissPopover}
                   onNavigate={onNavigate}
+                  onDisregardEntry={onDisregardEntry}
                 />
               ))}
               {markers.map(({ label, colIdx }) => (

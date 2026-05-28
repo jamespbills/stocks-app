@@ -24,7 +24,7 @@ declare global {
       }
       scripts: {
         launch: (scriptPath: string, args: string[]) => Promise<number>
-        launchBuiltin: (name: string) => Promise<number>
+        launchBuiltin: (name: string, args?: string[]) => Promise<number>
         stop: (pid: number) => Promise<void>
         onOutput: (
           cb: (pid: number, line: string, stream: 'stdout' | 'stderr') => void

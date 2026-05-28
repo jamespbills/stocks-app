@@ -32,6 +32,7 @@ export interface CalendarEntry {
   days_to_go: number
   r_play: number | null
   r_play_2: number | null
+  expectedFiling: 'A' | 'H' | null
   hasOverride: boolean
   overrideReason: string | null
 }
@@ -46,7 +47,7 @@ export interface CalendarCell {
 
 export type PopoverState =
   | null
-  | { kind: 'entry'; date: string; ticker: string }
+  | { kind: 'entry'; source: 'grid' | 'upcoming'; date: string; ticker: string }
   | { kind: 'day'; date: string }
 
 function toDateStr(val: string | Date): string {
@@ -72,6 +73,7 @@ export function rowToEntry(row: CalendarRow): CalendarEntry | null {
   }
   const filing = row.next_expected_filing
   const period = filing === 'A' ? 'FY' : filing === 'H' ? 'H' : '?'
+  const expectedFiling: 'A' | 'H' | null = filing === 'A' || filing === 'H' ? filing : null
   return {
     ticker: row.ticker,
     company: row.company,
@@ -81,6 +83,7 @@ export function rowToEntry(row: CalendarRow): CalendarEntry | null {
     days_to_go: dtg,
     r_play: row.r_play,
     r_play_2: row.r_play_2,
+    expectedFiling,
     hasOverride: row.has_override === 1,
     overrideReason: row.override_reason ?? null
   }

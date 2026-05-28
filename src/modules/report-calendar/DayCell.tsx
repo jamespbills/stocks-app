@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactElement } from 'react'
 import { EntryChip } from './EntryChip'
 import { EntryPopover } from './EntryPopover'
 import { DayPopover } from './DayPopover'
@@ -12,6 +12,7 @@ interface DayCellProps {
   onDayClick: (date: string, e: React.MouseEvent) => void
   onDismissPopover: () => void
   onNavigate: (moduleId: string) => void
+  onDisregardEntry: (entry: CalendarEntry) => void
 }
 
 const MAX_VISIBLE = 2
@@ -23,16 +24,26 @@ export function DayCell({
   onEntryClick,
   onDayClick,
   onDismissPopover,
-  onNavigate
+  onNavigate,
+  onDisregardEntry
 }: DayCellProps): ReactElement {
   const visible = entries.slice(0, MAX_VISIBLE)
   const hidden = entries.length - visible.length
 
+  const chipRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [moreEl, setMoreEl] = useState<HTMLDivElement | null>(null)
+  const [activeChipEl, setActiveChipEl] = useState<HTMLDivElement | null>(null)
+
   const activeEntry =
-    popover?.kind === 'entry' && popover.date === cell.date
+    popover?.kind === 'entry' && popover.source === 'grid' && popover.date === cell.date
       ? entries.find((e) => e.ticker === popover.ticker)
       : undefined
   const showDayPopover = popover?.kind === 'day' && popover.date === cell.date
+
+  const activeTicker = activeEntry?.ticker ?? null
+  useLayoutEffect(() => {
+    setActiveChipEl(activeTicker ? (chipRefs.current.get(activeTicker) ?? null) : null)
+  }, [activeTicker])
 
   return (
     <div
@@ -83,12 +94,19 @@ export function DayCell({
       {visible.map((e) => (
         <EntryChip
           key={e.ticker}
+          ref={(el) => {
+            if (el) chipRefs.current.set(e.ticker, el)
+            else chipRefs.current.delete(e.ticker)
+          }}
           ticker={e.ticker}
           period={e.period}
           status={e.status}
           hasOverride={e.hasOverride}
           selected={
-            popover?.kind === 'entry' && popover.date === cell.date && popover.ticker === e.ticker
+            popover?.kind === 'entry' &&
+            popover.source === 'grid' &&
+            popover.date === cell.date &&
+            popover.ticker === e.ticker
           }
           onClick={(ev) => onEntryClick(cell.date, e.ticker, ev)}
         />
@@ -96,6 +114,7 @@ export function DayCell({
 
       {hidden > 0 && (
         <div
+          ref={setMoreEl}
           onClick={(ev) => onDayClick(cell.date, ev)}
           style={{
             fontSize: 10.5,
@@ -111,12 +130,19 @@ export function DayCell({
       )}
 
       {activeEntry && (
-        <EntryPopover entry={activeEntry} onDismiss={onDismissPopover} onNavigate={onNavigate} />
+        <EntryPopover
+          entry={activeEntry}
+          anchorEl={activeChipEl}
+          onDismiss={onDismissPopover}
+          onNavigate={onNavigate}
+          onDisregard={() => onDisregardEntry(activeEntry)}
+        />
       )}
       {showDayPopover && (
         <DayPopover
           date={cell.date}
           entries={entries}
+          anchorEl={moreEl}
           onDismiss={onDismissPopover}
           onEntryClick={(ticker) => {
             const entry = entries.find((e) => e.ticker === ticker)
