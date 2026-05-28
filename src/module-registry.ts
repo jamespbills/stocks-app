@@ -26,7 +26,7 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: 'sector-signals',
-    label: 'Signals',
+    label: 'Sectors',
     icon: 'TrendingUp',
     group: 'data',
     load: lazy(() => import('./modules/sector-signals'))

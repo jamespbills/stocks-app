@@ -17,7 +17,7 @@ export function formatDate(value: DateInput, style: DateStyle = 'long', fallback
   if (!d) return fallback
   switch (style) {
     case 'iso':
-      return d.toISOString().slice(0, 10)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     case 'short':
       return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     case 'long':

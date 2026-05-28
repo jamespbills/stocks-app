@@ -149,6 +149,7 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - *(When Claude imports Electron APIs — `webFrame`, `shell`, `nativeTheme`, etc. — directly in renderer/React code, remind it: the renderer is sandboxed and cannot import from `electron`. All Electron APIs must go through `preload.ts` → `contextBridge` → `window.electronAPI`.)*
 - *(When Claude implements window controls without platform branching, remind it: Windows = custom min/max/close top-right, macOS = system traffic lights — see §8.)*
 - *(When Claude sorts or compares a mysql2 DATE column, remind it: the value is a JS `Date` object at runtime, not a string. Use `instanceof Date` / `.getTime()` — never `String(v).localeCompare()`.)*
+- *(When Claude calls `.toISOString()` on a mysql2 Date value for display or storage, remind it: `.toISOString()` is UTC-only and will be off by one day in BST. Use `formatDate(value, 'iso')` from `src/lib/format.ts` — see §7.)*
 - *(When Claude uses `ticker` as a React key or selection identity in a table, remind it: ticker is not unique — `view_watching` can return multiple rows per ticker. Use a composite `rowKey` — see `tasks/lessons.md`.)*
 - *(When calling `scripts:launch`, the first arg is the script file path — not `'python'`. The handler hardcodes `python` as the executable: `spawn('python', [scriptPath, ...args])`. For app-local scripts in `stock-app/scripts/`, use `scripts:launchBuiltin('name')` instead — it resolves the path and injects DB creds as env vars.)*
 

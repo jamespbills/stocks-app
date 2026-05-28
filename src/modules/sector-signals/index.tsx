@@ -155,6 +155,7 @@ export default function SectorSignals(): ReactElement {
   const latestActiveRef = useRef<ActiveRow[]>([])
   const [fetchTick, setFetchTick] = useState(0)
   const pendingChangesRef = useRef(pendingChanges)
+  const lastStrategyRef = useRef<Strategy>(strategy)
 
   // Sync ref after every render so .then() callbacks always see latest pending
   useEffect(() => {
@@ -178,12 +179,15 @@ export default function SectorSignals(): ReactElement {
         latestActiveRef.current = activeRows
         const built = buildGroups(statsRows, activeRows, pendingChangesRef.current, strategy)
         setGroups((prev) => {
+          const isStrategyChange = strategy !== lastStrategyRef.current
+          lastStrategyRef.current = strategy
           const prevExpanded =
-            prev.length > 0 ? new Set(prev.filter((g) => g.isExpanded).map((g) => g.sector)) : null
-          return built.map((g, i) => ({
+            !isStrategyChange && prev.length > 0
+              ? new Set(prev.filter((g) => g.isExpanded).map((g) => g.sector))
+              : null
+          return built.map((g) => ({
             ...g,
-            isExpanded:
-              prevExpanded !== null ? prevExpanded.has(g.sector) : g.combos.length > 0 && i < 3
+            isExpanded: prevExpanded !== null ? prevExpanded.has(g.sector) : false
           }))
         })
       })
