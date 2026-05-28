@@ -121,3 +121,99 @@ export const UPSERT_TICKER_NOTE_SQL = `
   VALUES (?, ?, ?, ?, ?)
   ON DUPLICATE KEY UPDATE note = VALUES(note)
 `
+
+// Leaderboard aggregate for play=12 — all combos ranked by cumulative return
+// Columns: sector, criterion_code, n_plays, n_unique_tickers, wins, losses,
+//          avg_roi, cumulative_roi, median_roi (all decimal fractions), is_active (0|1)
+export const COMBO_LEADERBOARD_PLAY_SQL = `
+  WITH base AS (
+    SELECT
+      dc.sector,
+      fm_miss.value                                                                     AS criterion_code,
+      fm_ret.value                                                                      AS roi,
+      dc.ticker,
+      ROW_NUMBER() OVER (PARTITION BY dc.sector, fm_miss.value ORDER BY fm_ret.value)  AS rn,
+      COUNT(*)      OVER (PARTITION BY dc.sector, fm_miss.value)                       AS cnt
+    FROM fact_reports fr
+    JOIN dim_companies dc
+      ON fr.company_id = dc.company_id
+    JOIN fact_metrics fm_play
+      ON fr.report_id     = fm_play.report_id
+     AND fm_play.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'play')
+    JOIN fact_metrics fm_miss
+      ON fr.report_id     = fm_miss.report_id
+     AND fm_miss.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'missed_upon')
+    JOIN fact_metrics fm_ret
+      ON fr.report_id     = fm_ret.report_id
+     AND fm_ret.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
+    WHERE fm_play.value = 12
+      AND fm_ret.value IS NOT NULL
+  )
+  SELECT
+    b.sector,
+    b.criterion_code,
+    COUNT(*)                                                                             AS n_plays,
+    COUNT(DISTINCT b.ticker)                                                            AS n_unique_tickers,
+    SUM(CASE WHEN b.roi > 0 THEN 1 ELSE 0 END)                                         AS wins,
+    SUM(CASE WHEN b.roi <= 0 THEN 1 ELSE 0 END)                                        AS losses,
+    AVG(b.roi)                                                                          AS avg_roi,
+    SUM(b.roi)                                                                          AS cumulative_roi,
+    AVG(CASE
+          WHEN b.rn IN (FLOOR((b.cnt + 1) / 2.0), CEIL((b.cnt + 1) / 2.0))
+          THEN b.roi
+        END)                                                                            AS median_roi,
+    COALESCE(MAX(a.is_active), 0)                                                      AS is_active
+  FROM base b
+  LEFT JOIN dim_sector_play_matrix a
+    ON b.sector = a.sector
+   AND b.criterion_code = a.missed_criterion
+  GROUP BY b.sector, b.criterion_code
+  ORDER BY SUM(b.roi) DESC
+`
+
+// Leaderboard aggregate for play_2=13 — same shape as above
+export const COMBO_LEADERBOARD_PLAY2_SQL = `
+  WITH base AS (
+    SELECT
+      dc.sector,
+      fm_miss.value                                                                     AS criterion_code,
+      fm_ret.value                                                                      AS roi,
+      dc.ticker,
+      ROW_NUMBER() OVER (PARTITION BY dc.sector, fm_miss.value ORDER BY fm_ret.value)  AS rn,
+      COUNT(*)      OVER (PARTITION BY dc.sector, fm_miss.value)                       AS cnt
+    FROM fact_reports fr
+    JOIN dim_companies dc
+      ON fr.company_id = dc.company_id
+    JOIN fact_metrics fm_play
+      ON fr.report_id     = fm_play.report_id
+     AND fm_play.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'play_2')
+    JOIN fact_metrics fm_miss
+      ON fr.report_id     = fm_miss.report_id
+     AND fm_miss.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'missed_upon_2')
+    JOIN fact_metrics fm_ret
+      ON fr.report_id     = fm_ret.report_id
+     AND fm_ret.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
+    WHERE fm_play.value = 13
+      AND fm_ret.value IS NOT NULL
+  )
+  SELECT
+    b.sector,
+    b.criterion_code,
+    COUNT(*)                                                                             AS n_plays,
+    COUNT(DISTINCT b.ticker)                                                            AS n_unique_tickers,
+    SUM(CASE WHEN b.roi > 0 THEN 1 ELSE 0 END)                                         AS wins,
+    SUM(CASE WHEN b.roi <= 0 THEN 1 ELSE 0 END)                                        AS losses,
+    AVG(b.roi)                                                                          AS avg_roi,
+    SUM(b.roi)                                                                          AS cumulative_roi,
+    AVG(CASE
+          WHEN b.rn IN (FLOOR((b.cnt + 1) / 2.0), CEIL((b.cnt + 1) / 2.0))
+          THEN b.roi
+        END)                                                                            AS median_roi,
+    COALESCE(MAX(a.is_active), 0)                                                      AS is_active
+  FROM base b
+  LEFT JOIN dim_sector_play_2_matrix a
+    ON b.sector = a.sector
+   AND b.criterion_code = a.missed_criterion
+  GROUP BY b.sector, b.criterion_code
+  ORDER BY SUM(b.roi) DESC
+`

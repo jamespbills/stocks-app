@@ -25,6 +25,7 @@ import { SectorMatrix } from './SectorMatrix'
 import { ComboDetailPanel } from './ComboDetailPanel'
 import { PendingFooter } from './PendingFooter'
 import { AppliedToast } from './AppliedToast'
+import { ComboLeaderboardModal } from './ComboLeaderboardModal'
 
 // ─── Raw DB row shapes ────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ export default function SectorSignals(): ReactElement {
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [appliedCount, setAppliedCount] = useState<number | null>(null)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
 
   const latestStatsRef = useRef<StatsRow[]>([])
   const latestActiveRef = useRef<ActiveRow[]>([])
@@ -437,6 +439,7 @@ export default function SectorSignals(): ReactElement {
         totalTracked={totalTracked}
         totalSectors={totalSectors}
         onRefresh={fetchMatrix}
+        onOpenLeaderboard={() => setLeaderboardOpen(true)}
       />
 
       {groups.length === 0 ? (
@@ -517,6 +520,13 @@ export default function SectorSignals(): ReactElement {
           error={applyError}
           onApply={handleApply}
           onDiscard={handleDiscard}
+        />
+      )}
+
+      {leaderboardOpen && (
+        <ComboLeaderboardModal
+          initialStrategy={strategy}
+          onClose={() => setLeaderboardOpen(false)}
         />
       )}
     </div>

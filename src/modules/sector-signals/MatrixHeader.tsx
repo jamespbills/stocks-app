@@ -8,6 +8,7 @@ interface MatrixHeaderProps {
   totalTracked: number
   totalSectors: number
   onRefresh: () => void
+  onOpenLeaderboard: () => void
 }
 
 export function MatrixHeader({
@@ -16,7 +17,8 @@ export function MatrixHeader({
   totalActive,
   totalTracked,
   totalSectors,
-  onRefresh
+  onRefresh,
+  onOpenLeaderboard
 }: MatrixHeaderProps): ReactElement {
   return (
     <div
@@ -88,6 +90,34 @@ export function MatrixHeader({
             )
           })}
         </div>
+
+        {/* Rankings button */}
+        <button
+          onClick={onOpenLeaderboard}
+          style={{
+            padding: '4px 10px',
+            fontSize: 12,
+            fontWeight: 'var(--font-medium)',
+            color: 'var(--color-text-secondary)',
+            background: 'transparent',
+            border: '1px solid var(--color-border-default)',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            transition: 'color var(--transition-fast), background var(--transition-fast)',
+            whiteSpace: 'nowrap'
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
+            ;(e.currentTarget as HTMLButtonElement).style.background =
+              'var(--color-interactive-hover)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-secondary)'
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+          }}
+        >
+          Rankings
+        </button>
 
         {/* Refresh button */}
         <button

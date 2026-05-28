@@ -18,5 +18,7 @@
 
 - **mysql2 DECIMAL columns return strings at runtime, not numbers.** Even though TypeScript types them as `number | null`, mysql2 sends DECIMAL values as strings (e.g. `"14.0000"`). Strict equality (`=== 13`) will never match. Always parse at the `rowToEntry()` boundary: `Math.round(Number(row.field))`. This applies to any numeric column typed DECIMAL in MySQL — play scores, percentages, ratios, etc.
 
+- **When `set-state-in-effect` fires on a loading flag, use a derived variable instead of a state setter.** Rather than `setLoading(true)` synchronously at the top of a fetch effect (blocked by the rule), track *what data is currently shown* in a separate state value (e.g. `loadedStrategy: Strategy | null`) and derive loading: `const isLoading = loadedStrategy !== strategy`. Call `setLoadedStrategy(strategy)` inside `.then()` and `.catch()` where the rule permits setState. This also correctly shows the loading state on any data-source change (strategy switch, refetch) without extra state management.
+
 - **For Disregard pre-fill on the Report Calendar, derive YEAR from the year part of the report's relevant date and FILING from `view_earnings_calendar.next_expected_filing`** — never from `r_financial_year` or `r_filing_identifier`, which reflect the company's currently-tagged FY and the *last* filed report respectively. The Disregard form is editable so this is a best-guess pre-fill, but defaulting to the next-upcoming report's year/filing is what the user expects.
 

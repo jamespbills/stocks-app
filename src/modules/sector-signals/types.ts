@@ -50,6 +50,22 @@ export interface PendingChange {
   targetActive: boolean
 }
 
+export interface ComboLeaderboardRow {
+  sector: string
+  criterionCode: number
+  criterionName: string
+  nPlays: number
+  nUniqueTickers: number
+  wins: number
+  losses: number
+  winPct: number | null
+  avgRoi: number | null
+  medianRoi: number | null
+  cumulativeRoi: number | null
+  signalStrength: SignalStrength
+  isActive: boolean
+}
+
 export const CRITERION_NAMES: Record<number, string> = {
   1: 'ROIC',
   2: 'GD/PE',
