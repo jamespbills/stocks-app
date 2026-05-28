@@ -105,6 +105,13 @@ def main() -> int:
             )
             print("  Inserted new row")
 
+        cursor.execute(
+            "DELETE FROM app_date_overrides WHERE ticker = %s",
+            (ticker,),
+        )
+        if cursor.rowcount:
+            print(f"  Removed date override for {ticker}")
+
         print(f"Done. {ticker} FY{year} {filing_type} marked as disregarded.")
         return 0
     finally:

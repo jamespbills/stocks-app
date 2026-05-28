@@ -101,6 +101,13 @@ def main() -> int:
         )
         print("  Updated dim_companies (is_active = 0)")
 
+        cursor.execute(
+            "DELETE FROM app_date_overrides WHERE ticker = %s",
+            (ticker,),
+        )
+        if cursor.rowcount:
+            print(f"  Removed date override for {ticker}")
+
         reports = find_reports_without_return_1y(cursor, company_id)
         annuals = [r for r in reports if r[1].lower() in ("annual", "a")]
         semis = [r for r in reports if r[1].lower() in ("semi-annual", "semi", "h")]
