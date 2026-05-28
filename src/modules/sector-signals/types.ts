@@ -23,7 +23,10 @@ export interface SectorGroup {
 export interface ComboTicker {
   ticker: string
   roi: number | null
+  roi6m: number | null
   reportDate: string | null
+  financialYear: number | null
+  filingIdentifier: string | null
   note: string
 }
 

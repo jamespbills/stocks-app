@@ -21,12 +21,15 @@ export const ACTIVE_MATRIX_PLAY2_SQL = `
 `
 
 // Ticker list for a play=12 combo — params: [sector, criterionCode]
-// Columns: ticker, roi (decimal fraction), report_date
+// Columns: ticker, roi (decimal fraction), report_date, financial_year, filing_identifier, roi_6m
 export const COMBO_TICKERS_PLAY_SQL = `
   SELECT
     dc.ticker,
     fm_ret.value          AS roi,
-    fr.date_released      AS report_date
+    fr.date_released      AS report_date,
+    fr.financial_year,
+    fr.filing_identifier,
+    fm_6m.value           AS roi_6m
   FROM fact_reports fr
   JOIN dim_companies dc            ON fr.company_id  = dc.company_id
   JOIN fact_metrics fm_play        ON fr.report_id   = fm_play.report_id
@@ -38,6 +41,9 @@ export const COMBO_TICKERS_PLAY_SQL = `
   LEFT JOIN fact_metrics fm_ret    ON fr.report_id   = fm_ret.report_id
                                   AND fm_ret.metric_id = (
                                     SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
+  LEFT JOIN fact_metrics fm_6m     ON fr.report_id   = fm_6m.report_id
+                                  AND fm_6m.metric_id = (
+                                    SELECT metric_id FROM dim_metrics WHERE name = 'return_6m')
   WHERE fm_play.value = 12
     AND dc.sector = ?
     AND fm_miss.value = ?
@@ -49,7 +55,10 @@ export const COMBO_TICKERS_PLAY2_SQL = `
   SELECT
     dc.ticker,
     fm_ret.value          AS roi,
-    fr.date_released      AS report_date
+    fr.date_released      AS report_date,
+    fr.financial_year,
+    fr.filing_identifier,
+    fm_6m.value           AS roi_6m
   FROM fact_reports fr
   JOIN dim_companies dc            ON fr.company_id  = dc.company_id
   JOIN fact_metrics fm_play        ON fr.report_id   = fm_play.report_id
@@ -61,6 +70,9 @@ export const COMBO_TICKERS_PLAY2_SQL = `
   LEFT JOIN fact_metrics fm_ret    ON fr.report_id   = fm_ret.report_id
                                   AND fm_ret.metric_id = (
                                     SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
+  LEFT JOIN fact_metrics fm_6m     ON fr.report_id   = fm_6m.report_id
+                                  AND fm_6m.metric_id = (
+                                    SELECT metric_id FROM dim_metrics WHERE name = 'return_6m')
   WHERE fm_play.value = 13
     AND dc.sector = ?
     AND fm_miss.value = ?

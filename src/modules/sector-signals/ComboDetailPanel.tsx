@@ -1,8 +1,8 @@
-import { useState, useCallback, type ReactElement } from 'react'
+import { type ReactElement } from 'react'
 import type { ComboDetail, Strategy } from './types'
 import { SignalBadge } from './SignalBadge'
-import { UPSERT_COMBO_NOTE_SQL, UPSERT_TICKER_NOTE_SQL } from './queries'
-import { formatDate, formatPercent } from '../../lib/format'
+import { UPSERT_COMBO_NOTE_SQL } from './queries'
+import { formatPercent } from '../../lib/format'
 import { MutedLabel } from '../../components/MutedLabel'
 import { useDebouncedSave } from '../../hooks/useDebouncedSave'
 
@@ -11,12 +11,16 @@ interface ComboDetailPanelProps {
   strategy: Strategy
   onClose: () => void
   onNoteChange: (note: string) => void
-  onTickerNoteChange: (ticker: string, note: string) => void
 }
 
 function roiColor(roi: number | null): string {
   if (roi === null) return 'var(--color-text-muted)'
   return roi > 0 ? 'var(--color-up)' : 'var(--color-down)'
+}
+
+function formatReportId(year: number | null, filing: string | null): string {
+  if (year === null || filing === null) return '—'
+  return `${year}-${filing}`
 }
 
 function computeWinRate(tickers: ComboDetail['tickers']): number | null {
@@ -34,20 +38,12 @@ function computeMedianRoi(tickers: ComboDetail['tickers']): number | null {
   return values.length % 2 !== 0 ? values[mid] : (values[mid - 1] + values[mid]) / 2
 }
 
-interface EditingTickerNote {
-  ticker: string
-  value: string
-}
-
 export function ComboDetailPanel({
   detail,
   strategy,
   onClose,
-  onNoteChange,
-  onTickerNoteChange
+  onNoteChange
 }: ComboDetailPanelProps): ReactElement {
-  const [editingNote, setEditingNote] = useState<EditingTickerNote | null>(null)
-
   const {
     value: noteValue,
     setValue: setNoteValue,
@@ -66,26 +62,6 @@ export function ComboDetailPanel({
       onNoteChange(value)
     }
   })
-
-  const commitTickerNote = useCallback(
-    (ticker: string, note: string) => {
-      window.electronAPI.db
-        .query(UPSERT_TICKER_NOTE_SQL, [
-          strategy,
-          detail.sector,
-          detail.criterionCode,
-          ticker,
-          note
-        ])
-        .then(() => {
-          onTickerNoteChange(ticker, note)
-        })
-        .catch(() => {
-          /* silent */
-        })
-    },
-    [strategy, detail.sector, detail.criterionCode, onTickerNoteChange]
-  )
 
   const winRate = computeWinRate(detail.tickers)
   const medianRoi = computeMedianRoi(detail.tickers)
@@ -365,138 +341,87 @@ export function ComboDetailPanel({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '68px 72px 96px 1fr',
+                  gridTemplateColumns: '1fr 58px 68px 60px',
                   columnGap: 8,
                   padding: '6px 10px',
                   background: 'var(--color-bg-overlay)',
                   borderBottom: '1px solid var(--color-border-subtle)'
                 }}
               >
-                {['TICKER', 'RETURN', 'DATE', 'NOTE'].map((col) => (
-                  <MutedLabel key={col} mono size={10}>
-                    {col}
-                  </MutedLabel>
-                ))}
+                <MutedLabel mono size={10}>TICKER</MutedLabel>
+                <div style={{ textAlign: 'right' }}>
+                  <MutedLabel mono size={10}>6M</MutedLabel>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <MutedLabel mono size={10}>1Y</MutedLabel>
+                </div>
+                <div style={{ paddingLeft: 12 }}>
+                  <MutedLabel mono size={10}>REPORT</MutedLabel>
+                </div>
               </div>
 
               {/* Rows */}
-              {detail.tickers.map((t, i) => {
-                const isEditingThisNote = editingNote !== null && editingNote.ticker === t.ticker
-
-                return (
-                  <div
-                    key={`${t.ticker}-${i}`}
+              {detail.tickers.map((t, i) => (
+                <div
+                  key={`${t.ticker}-${i}`}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 58px 68px 60px',
+                    columnGap: 8,
+                    padding: '6px 10px',
+                    borderBottom:
+                      i < detail.tickers.length - 1
+                        ? '1px solid var(--color-border-subtle)'
+                        : 'none',
+                    alignItems: 'center'
+                  }}
+                >
+                  <span
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '68px 72px 96px 1fr',
-                      columnGap: 8,
-                      padding: '6px 10px',
-                      borderBottom:
-                        i < detail.tickers.length - 1
-                          ? '1px solid var(--color-border-subtle)'
-                          : 'none',
-                      alignItems: 'center'
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 500,
+                      color: 'var(--color-text-primary)'
                     }}
                   >
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-sm)',
-                        fontWeight: 500,
-                        color: 'var(--color-text-primary)'
-                      }}
-                    >
-                      {t.ticker}
-                    </span>
+                    {t.ticker}
+                  </span>
 
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-sm)',
-                        color: roiColor(t.roi),
-                        textAlign: 'right',
-                        paddingRight: 4
-                      }}
-                    >
-                      {formatPercent(t.roi)}
-                    </span>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 11,
+                      color: roiColor(t.roi6m),
+                      textAlign: 'right',
+                      opacity: 0.75
+                    }}
+                  >
+                    {formatPercent(t.roi6m)}
+                  </span>
 
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 11.5,
-                        color: 'var(--color-text-muted)'
-                      }}
-                    >
-                      {formatDate(t.reportDate, 'iso')}
-                    </span>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-sm)',
+                      color: roiColor(t.roi),
+                      textAlign: 'right'
+                    }}
+                  >
+                    {formatPercent(t.roi)}
+                  </span>
 
-                    {/* Note — click to edit inline */}
-                    {isEditingThisNote ? (
-                      <input
-                        autoFocus
-                        value={editingNote.value}
-                        onChange={(e) =>
-                          setEditingNote({ ticker: t.ticker, value: e.target.value })
-                        }
-                        onBlur={() => {
-                          commitTickerNote(t.ticker, editingNote.value)
-                          setEditingNote(null)
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === 'Escape') {
-                            if (e.key === 'Enter') {
-                              commitTickerNote(t.ticker, editingNote.value)
-                            }
-                            setEditingNote(null)
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          background: 'var(--color-bg-input)',
-                          border: '1px solid var(--color-border-focus)',
-                          borderRadius: 'var(--radius-xs)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: 'var(--text-sm)',
-                          fontFamily: 'var(--font-sans)',
-                          padding: '1px 4px',
-                          outline: 'none'
-                        }}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => setEditingNote({ ticker: t.ticker, value: t.note })}
-                        title="Click to edit"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          fontSize: 'var(--text-sm)',
-                          color: t.note ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          cursor: 'text',
-                          opacity: t.note ? 1 : 0.4,
-                          borderRadius: 'var(--radius-xs)',
-                          padding: '0 4px',
-                          transition: 'background var(--transition-fast)'
-                        }}
-                        onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLDivElement).style.background =
-                            'var(--color-bg-overlay)'
-                        }}
-                        onMouseLeave={(e) => {
-                          ;(e.currentTarget as HTMLDivElement).style.background = 'transparent'
-                        }}
-                      >
-                        {t.note || 'add note…'}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 11,
+                      color: 'var(--color-text-muted)',
+                      paddingLeft: 12
+                    }}
+                  >
+                    {formatReportId(t.financialYear, t.filingIdentifier)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

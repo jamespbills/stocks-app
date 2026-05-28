@@ -46,7 +46,10 @@ interface ActiveRow {
 interface TickerRow {
   ticker: string
   roi: number | null
+  roi_6m: number | null
   report_date: string | null
+  financial_year: number | null
+  filing_identifier: string | null
 }
 
 interface NoteRow {
@@ -286,11 +289,14 @@ export default function SectorSignals(): ReactElement {
         const tickers: ComboTicker[] = tickerRows.map((r) => ({
           ticker: r.ticker,
           roi: r.roi !== null && r.roi !== undefined ? Number(r.roi) : null,
+          roi6m: r.roi_6m !== null && r.roi_6m !== undefined ? Number(r.roi_6m) : null,
           reportDate: r.report_date
             ? (r.report_date as unknown) instanceof Date
               ? (r.report_date as unknown as Date).toISOString()
               : String(r.report_date)
             : null,
+          financialYear: r.financial_year !== null && r.financial_year !== undefined ? Number(r.financial_year) : null,
+          filingIdentifier: r.filing_identifier ?? null,
           note: noteMap.get(r.ticker) ?? ''
         }))
 
@@ -494,16 +500,6 @@ export default function SectorSignals(): ReactElement {
               }}
               onNoteChange={(note) =>
                 setComboDetail((prev) => (prev ? { ...prev, comboNote: note } : prev))
-              }
-              onTickerNoteChange={(ticker, note) =>
-                setComboDetail((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        tickers: prev.tickers.map((t) => (t.ticker === ticker ? { ...t, note } : t))
-                      }
-                    : prev
-                )
               }
             />
           )}
