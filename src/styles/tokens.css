@@ -151,3 +151,26 @@ body {
 p, span, td, th, input, textarea, [data-selectable] {
   user-select: text;
 }
+
+/* --- Themed scrollbars (Electron/Chromium — WebKit pseudo-elements are sufficient) --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-focus);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-bg-surface);
+}

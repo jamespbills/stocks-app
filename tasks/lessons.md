@@ -16,5 +16,7 @@
 
 - **Outside-click dismiss via a global `window` click listener must check `contains(e.target)`.** Bare `onClick={(e) => e.stopPropagation()}` on the popover root does NOT stop native bubbling to `window` in React 17+ (events are delegated at the root container, not document). Without the containment check, every click inside the popover would also dismiss it.
 
+- **mysql2 DECIMAL columns return strings at runtime, not numbers.** Even though TypeScript types them as `number | null`, mysql2 sends DECIMAL values as strings (e.g. `"14.0000"`). Strict equality (`=== 13`) will never match. Always parse at the `rowToEntry()` boundary: `Math.round(Number(row.field))`. This applies to any numeric column typed DECIMAL in MySQL — play scores, percentages, ratios, etc.
+
 - **For Disregard pre-fill on the Report Calendar, derive YEAR from the year part of the report's relevant date and FILING from `view_earnings_calendar.next_expected_filing`** — never from `r_financial_year` or `r_filing_identifier`, which reflect the company's currently-tagged FY and the *last* filed report respectively. The Disregard form is editable so this is a best-guess pre-fill, but defaulting to the next-upcoming report's year/filing is what the user expects.
 

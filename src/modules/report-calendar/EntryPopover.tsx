@@ -17,6 +17,18 @@ function statusLabel(status: EntryStatus, daysToGo: number): string {
   return `in ${daysToGo}d`
 }
 
+function playColor(score: number | null): string {
+  if (score === 13) return 'var(--color-play-13-text)'
+  if (score === 12) return 'var(--color-play-12-text)'
+  return 'var(--color-text-muted)'
+}
+
+function play2Color(score: number | null): string {
+  if (score === 14) return 'var(--color-play-13-text)'
+  if (score === 13) return 'var(--color-play-12-text)'
+  return 'var(--color-text-muted)'
+}
+
 function statusColor(status: EntryStatus): string {
   if (status === 'overdue') return 'var(--color-danger)'
   if (status === 'amber') return 'var(--color-warning)'
@@ -100,6 +112,51 @@ export function EntryPopover({
               {entry.overrideReason}
             </div>
           )}
+        </div>
+      )}
+      {(entry.r_play != null || entry.r_play_2 != null || entry.p_play != null || entry.p_play_2 != null) && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 4,
+            marginBottom: 12,
+            padding: 8,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--color-border-subtle)',
+            borderRadius: 4
+          }}
+        >
+          {([
+            { label: 'R · PLAY', value: entry.r_play, colorFn: playColor },
+            { label: 'R · PLAY 2', value: entry.r_play_2, colorFn: play2Color },
+            { label: 'P · PLAY', value: entry.p_play, colorFn: playColor },
+            { label: 'P · PLAY 2', value: entry.p_play_2, colorFn: play2Color }
+          ] as Array<{ label: string; value: number | null; colorFn: (s: number | null) => string }>).map(({ label, value, colorFn }) => (
+            <div key={label}>
+              <div
+                style={{
+                  fontSize: 9.5,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--color-text-muted)',
+                  marginBottom: 1
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: colorFn(value)
+                }}
+              >
+                {value ?? '—'}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       <div style={{ display: 'flex', gap: 6 }}>

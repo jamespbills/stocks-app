@@ -17,6 +17,18 @@ function formatShortDate(dateStr: string): string {
   return formatDate(dateStr, 'short', '?')
 }
 
+function playColor(score: number | null): string {
+  if (score === 13) return 'var(--color-play-13-text)'
+  if (score === 12) return 'var(--color-play-12-text)'
+  return 'rgba(255,255,255,0.22)'
+}
+
+function play2Color(score: number | null): string {
+  if (score === 14) return 'var(--color-play-13-text)'
+  if (score === 13) return 'var(--color-play-12-text)'
+  return 'rgba(255,255,255,0.22)'
+}
+
 function SectionLabel({ children, color }: { children: string; color?: string }): ReactElement {
   return (
     <MutedLabel as="div" style={{ padding: '8px 16px 4px', ...(color ? { color } : {}) }}>
@@ -81,7 +93,7 @@ function UpcomingRow({
       }}
     >
       <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span
             style={{
               fontFamily: 'var(--font-mono)',
@@ -101,6 +113,30 @@ function UpcomingRow({
           >
             {entry.period}
           </span>
+          {(entry.r_play != null || entry.r_play_2 != null) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: playColor(entry.r_play),
+                  flexShrink: 0,
+                  display: 'inline-block'
+                }}
+              />
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: play2Color(entry.r_play_2),
+                  flexShrink: 0,
+                  display: 'inline-block'
+                }}
+              />
+            </span>
+          )}
         </div>
         <span
           style={{

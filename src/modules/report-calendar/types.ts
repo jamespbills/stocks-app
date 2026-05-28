@@ -32,6 +32,8 @@ export interface CalendarEntry {
   days_to_go: number
   r_play: number | null
   r_play_2: number | null
+  p_play: number | null
+  p_play_2: number | null
   expectedFiling: 'A' | 'H' | null
   hasOverride: boolean
   overrideReason: string | null
@@ -81,8 +83,10 @@ export function rowToEntry(row: CalendarRow): CalendarEntry | null {
     period,
     status,
     days_to_go: dtg,
-    r_play: row.r_play,
-    r_play_2: row.r_play_2,
+    r_play: row.r_play != null ? Math.round(Number(row.r_play)) : null,
+    r_play_2: row.r_play_2 != null ? Math.round(Number(row.r_play_2)) : null,
+    p_play: row.p_play != null ? Math.round(Number(row.p_play)) : null,
+    p_play_2: row.p_play_2 != null ? Math.round(Number(row.p_play_2)) : null,
     expectedFiling,
     hasOverride: row.has_override === 1,
     overrideReason: row.override_reason ?? null
