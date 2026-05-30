@@ -32,6 +32,13 @@ export const modules: ModuleDefinition[] = [
     load: lazy(() => import('./modules/sector-signals'))
   },
   {
+    id: 'price-archive',
+    label: 'Price Archive',
+    icon: 'Database',
+    group: 'data',
+    load: lazy(() => import('./modules/price-archive'))
+  },
+  {
     id: 'markdown-viewer',
     label: 'Reviews',
     icon: 'FileText',

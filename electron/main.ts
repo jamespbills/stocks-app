@@ -5,6 +5,7 @@ import { loadConfig } from './config'
 import { initDB, registerDBHandlers } from './ipc/db'
 import { registerFSHandlers } from './ipc/fs'
 import { registerScriptHandlers } from './ipc/scripts'
+import { registerArchiveHandlers } from './ipc/archive'
 import { runMigrations } from './migrations'
 
 function createWindow(): void {
@@ -82,6 +83,7 @@ app.whenReady().then(async () => {
   registerDBHandlers()
   registerFSHandlers()
   registerScriptHandlers()
+  registerArchiveHandlers()
   registerWindowHandlers()
 
   createWindow()

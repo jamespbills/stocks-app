@@ -42,6 +42,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener('scripts:exit', handler)
     }
   },
+  archive: {
+    previewPriceCsv: (args: { ticker: string; csv: string; columnMap?: Record<string, string> }) =>
+      ipcRenderer.invoke('archive:previewPriceCsv', args),
+    importPriceCsv: (args: { ticker: string; rows: unknown[] }) =>
+      ipcRenderer.invoke('archive:importPriceCsv', args)
+  },
   win: {
     minimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
     maximize: (): Promise<void> => ipcRenderer.invoke('win:maximize'),

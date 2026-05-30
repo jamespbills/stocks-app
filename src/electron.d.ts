@@ -1,3 +1,10 @@
+import type {
+  ColumnMap,
+  CsvImportResult,
+  CsvPreview,
+  ParsedBar
+} from './modules/price-archive/types'
+
 export interface DBStatus {
   connected: boolean
   error?: string
@@ -21,6 +28,14 @@ declare global {
       fs: {
         readFile: (path: string) => Promise<string>
         listDirectory: (path: string) => Promise<FileEntry[]>
+      }
+      archive: {
+        previewPriceCsv: (args: {
+          ticker: string
+          csv: string
+          columnMap?: ColumnMap
+        }) => Promise<CsvPreview>
+        importPriceCsv: (args: { ticker: string; rows: ParsedBar[] }) => Promise<CsvImportResult>
       }
       scripts: {
         launch: (scriptPath: string, args: string[]) => Promise<number>

@@ -37,6 +37,12 @@ export async function initDB(): Promise<void> {
   }
 }
 
+// Exposed so other IPC handlers (e.g. archive CSV import) can run transactions
+// against the same pool. Returns null until initDB() has run.
+export function getPool(): mysql.Pool | null {
+  return pool
+}
+
 export function registerDBHandlers(): void {
   ipcMain.handle('db:query', async (_, { sql, params }: { sql: string; params?: unknown[] }) => {
     if (!pool) throw new Error('Database not initialised')

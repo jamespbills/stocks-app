@@ -86,7 +86,9 @@ If verification fails after 3 attempts, stop. Report: what you tried, the failin
 ## 6. Hard guardrails
 
 - **Never query MySQL from the renderer.** All DB access via `window.electronAPI.db.query()` (IPC → main). Zero exceptions.
-- **Never write to financial tables:** `fact_reports`, `fact_metrics`, `stock_archive_flat`, `dim_companies`, `dim_sectors`, `dim_play_definitions`, or any `dim_*` financial dim. App writes to `app_*` tables only.
+- **Never write to financial tables:** `fact_reports`, `fact_metrics`, `stock_archive_flat`, `dim_companies`, `dim_sectors`, `dim_play_definitions`, or any `dim_*` financial dim owned by the Python/stored-proc ingestion pipeline. The app reads these only.
+- **The app owns the price domain end-to-end.** It may create, read, and write `fact_historical_prices` and `dim_price_runs` (the Price Archive is the single writer of historical OHLCV), plus its `app_*` config tables and shared views it defines (e.g. `view_play_universe`, `vw_archive_coverage_target`). These `fact_`/`dim_` names follow the star-schema convention deliberately; they are app-owned, not ingestion-pipeline tables.
+- **Never destroy data.** App migrations and queries must NEVER `DROP`, `DELETE`, `TRUNCATE`, or alter an existing object in a way that breaks it. Migrations are re-run on every boot, so every statement must be idempotent: `CREATE … IF NOT EXISTS`, `CREATE OR REPLACE VIEW`, `INSERT … ON DUPLICATE KEY` only.
 - **Never hardcode `"play"` or `"play_2"`.** Play strategies are data-driven from `dim_play_definitions`. If you're about to write either string as a hard-coded identifier — stop, query the table instead.
 - **Never hardcode file paths.** All external paths come from `config.local.json` → `AppConfig`. Never fall back to a hardcoded string.
 - **Never commit `config.local.json`.** It is git-ignored. Never put real credentials in `config.example.json`.
@@ -123,7 +125,7 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - **macOS:** `trafficLightPosition` positions system traffic lights within the bar on the left. No custom buttons needed.
 
 **Sidebar:** Fixed 200px, not collapsible in v1. Two groups:
-- *Data:* Watching Dashboard · Report Calendar · Sector Signals
+- *Data:* Watching Dashboard · Report Calendar · Sector Signals · Price Archive
 - *Tools:* Reviews · Scripts · TA Charts
 - Settings item pinned to the bottom, outside the groups
 - Active item background: `var(--color-interactive-active)`. Active text: `var(--color-text-primary)`. Inactive text: `var(--color-interactive-text-inactive)`.
