@@ -1,0 +1,12 @@
+=== BASELINE before momentum_new gate change (Fri Jun  5 23:21:44 GMTDT 2026) ===
+metric	n
+full_play_15	55
+full_play2_16	70
+has_momentum_new	2411
+--- target reports (before) ---
+report_id	ticker	financial_year	filing_identifier	cov_new	momentum_new	play	play_2	missed_upon	missed_upon_2
+2317	ASO	2022	H	0.4138	NULL	14	15	15	16
+6498	BLD	2023	H	0.4138	NULL	13	15	515	16
+7002	IESC	2024	H	0.4138	NULL	14	14	15	1416
+5347	SMCI	2022	H	0.4138	NULL	14	14	15	1416
+6333	YELP	2024	H	0.4138	NULL	14	14	15	1416
