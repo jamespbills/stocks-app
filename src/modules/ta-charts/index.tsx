@@ -9,6 +9,9 @@ import { SettingsPanel } from './settings/SettingsPanel'
 import { TickerPicker } from './chart/TickerPicker'
 import { ChartShell } from './chart/ChartShell'
 import { ChartEmpty } from './chart/ChartEmpty'
+import { AnalysisSurface } from './analysis/AnalysisSurface'
+
+type Surface = 'chart' | 'analysis'
 
 function Centered({ children }: { children: ReactNode }): ReactElement {
   return (
@@ -32,6 +35,7 @@ export default function TACharts(): ReactElement {
   const tickerList = useTickerList()
   const settingsQuery = useTaSettings()
 
+  const [surface, setSurface] = useState<Surface>('chart')
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const [liveSettings, setLiveSettings] = useState<TaSettings | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -75,18 +79,29 @@ export default function TACharts(): ReactElement {
             color: 'var(--color-text-primary)'
           }}
         >
-          TA chart
+          TA charts
         </span>
-        <span style={{ width: 1, height: 18, background: 'var(--color-border-subtle)' }} />
-        <TickerPicker
-          tickers={tickerList.data ?? []}
-          value={effectiveTicker}
-          onChange={setSelectedTicker}
-        />
+
+        <SurfaceSwitcher value={surface} onChange={setSurface} />
+
+        {surface === 'chart' && (
+          <>
+            <span style={{ width: 1, height: 18, background: 'var(--color-border-subtle)' }} />
+            <TickerPicker
+              tickers={tickerList.data ?? []}
+              value={effectiveTicker}
+              onChange={setSelectedTicker}
+            />
+          </>
+        )}
 
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 16 }}>
-          <Legend swatch="var(--color-chart-date-line)" label="play universe" />
-          <Legend swatch="rgba(255,255,255,0.35)" label="report" />
+          {surface === 'chart' && (
+            <>
+              <Legend swatch="var(--color-chart-date-line)" label="play universe" />
+              <Legend swatch="rgba(255,255,255,0.35)" label="report" />
+            </>
+          )}
           <button
             type="button"
             aria-label="Indicator settings"
@@ -111,28 +126,35 @@ export default function TACharts(): ReactElement {
 
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {tickerList.loading ? (
-            <Centered>Loading tickers…</Centered>
-          ) : !effectiveTicker ? (
-            <ChartEmpty ticker="—" onOpenArchive={() => navigate('price-archive')} />
-          ) : chart.error ? (
-            <Centered>
-              Failed to load {effectiveTicker}: {chart.error}
-            </Centered>
-          ) : chart.loading || !chart.data ? (
-            <Centered>Loading {effectiveTicker}…</Centered>
-          ) : chart.data.bars.length === 0 ? (
-            <ChartEmpty ticker={effectiveTicker} onOpenArchive={() => navigate('price-archive')} />
-          ) : (
-            <ChartShell
-              bars={chart.data.bars}
-              reports={chart.data.reports}
-              periods={periods}
-              signalSettings={signalSettings}
-            />
-          )}
-        </div>
+        {surface === 'analysis' ? (
+          <AnalysisSurface settings={settings} />
+        ) : (
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            {tickerList.loading ? (
+              <Centered>Loading tickers…</Centered>
+            ) : !effectiveTicker ? (
+              <ChartEmpty ticker="—" onOpenArchive={() => navigate('price-archive')} />
+            ) : chart.error ? (
+              <Centered>
+                Failed to load {effectiveTicker}: {chart.error}
+              </Centered>
+            ) : chart.loading || !chart.data ? (
+              <Centered>Loading {effectiveTicker}…</Centered>
+            ) : chart.data.bars.length === 0 ? (
+              <ChartEmpty
+                ticker={effectiveTicker}
+                onOpenArchive={() => navigate('price-archive')}
+              />
+            ) : (
+              <ChartShell
+                bars={chart.data.bars}
+                reports={chart.data.reports}
+                periods={periods}
+                signalSettings={signalSettings}
+              />
+            )}
+          </div>
+        )}
 
         {settingsOpen && settingsQuery.data && (
           <SettingsPanel
@@ -142,6 +164,49 @@ export default function TACharts(): ReactElement {
           />
         )}
       </div>
+    </div>
+  )
+}
+
+function SurfaceSwitcher({
+  value,
+  onChange
+}: {
+  value: Surface
+  onChange: (s: Surface) => void
+}): ReactElement {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        border: '1px solid var(--color-border-default)',
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden'
+      }}
+    >
+      {(['chart', 'analysis'] as Surface[]).map((s) => {
+        const active = value === s
+        return (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onChange(s)}
+            style={{
+              padding: '3px 12px',
+              fontSize: 12,
+              fontWeight: 'var(--font-medium)',
+              color: active ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              background: active ? 'var(--color-interactive-active)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textTransform: 'capitalize',
+              transition: 'background var(--transition-fast), color var(--transition-fast)'
+            }}
+          >
+            {s}
+          </button>
+        )
+      })}
     </div>
   )
 }

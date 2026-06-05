@@ -3,7 +3,7 @@
 // Archive is the single owner of how prices are read out of the store.
 
 import { formatDate } from '../../../lib/format'
-import { PRICE_SERIES_SQL } from '../queries'
+import { PRICE_SERIES_SQL, priceSeriesBatchSql } from '../queries'
 import type { PriceBar } from '../types'
 
 interface RawPriceRow {
@@ -14,6 +14,10 @@ interface RawPriceRow {
   close_price: string | number | null
   adj_close_price: string | number | null
   volume: string | number | null
+}
+
+interface RawBatchPriceRow extends RawPriceRow {
+  ticker: string
 }
 
 function num(v: string | number | null): number | null {
@@ -36,7 +40,11 @@ export async function fetchPriceSeries(
     from,
     to
   ])) as RawPriceRow[]
-  return rows.map((r) => ({
+  return rows.map(toBar)
+}
+
+function toBar(r: RawPriceRow): PriceBar {
+  return {
     tradeDate: formatDate(r.trade_date, 'iso', ''),
     open: num(r.open_price),
     high: num(r.high_price),
@@ -44,5 +52,34 @@ export async function fetchPriceSeries(
     close: num(r.close_price) ?? 0,
     adjClose: num(r.adj_close_price),
     volume: num(r.volume)
-  }))
+  }
+}
+
+/**
+ * Fetch clean OHLCV series for many tickers in one query — the batched seam the
+ * TA Stage 3 cohort run uses (one round-trip instead of N). Returns a
+ * Map<ticker, PriceBar[]>; tickers with no rows in range are simply absent.
+ * Empty input short-circuits (avoids an `IN ()` syntax error).
+ */
+export async function fetchPriceSeriesBatch(
+  tickers: string[],
+  from: string,
+  to: string
+): Promise<Map<string, PriceBar[]>> {
+  const out = new Map<string, PriceBar[]>()
+  if (tickers.length === 0) return out
+  const rows = (await window.electronAPI.db.query(priceSeriesBatchSql(tickers.length), [
+    ...tickers,
+    from,
+    to
+  ])) as RawBatchPriceRow[]
+  for (const r of rows) {
+    let series = out.get(r.ticker)
+    if (!series) {
+      series = []
+      out.set(r.ticker, series)
+    }
+    series.push(toBar(r))
+  }
+  return out
 }

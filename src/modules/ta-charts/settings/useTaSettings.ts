@@ -26,6 +26,7 @@ interface RawTaSettingsRow {
   chart_window_days_before: number | string
   chart_window_days_after: number | string
   exit_mode: string
+  buy_entry_window_days: number | string
 }
 
 export const DEFAULT_TA_SETTINGS: TaSettings = {
@@ -48,7 +49,8 @@ export const DEFAULT_TA_SETTINGS: TaSettings = {
   rsiBSell: 50,
   chartWindowDaysBefore: 365,
   chartWindowDaysAfter: 365,
-  exitMode: 'window_end'
+  exitMode: 'window_end',
+  buyEntryWindowDays: 90
 }
 
 function toSettings(r: RawTaSettingsRow): TaSettings {
@@ -72,7 +74,8 @@ function toSettings(r: RawTaSettingsRow): TaSettings {
     rsiBSell: Number(r.rsi_b_sell),
     chartWindowDaysBefore: Number(r.chart_window_days_before),
     chartWindowDaysAfter: Number(r.chart_window_days_after),
-    exitMode: r.exit_mode === 'next_sell_signal' ? 'next_sell_signal' : 'window_end'
+    exitMode: r.exit_mode === 'next_sell_signal' ? 'next_sell_signal' : 'window_end',
+    buyEntryWindowDays: Number(r.buy_entry_window_days)
   }
 }
 
@@ -116,6 +119,7 @@ export async function saveTaSettings(s: TaSettings): Promise<void> {
     s.rsiBSell,
     s.chartWindowDaysBefore,
     s.chartWindowDaysAfter,
-    s.exitMode
+    s.exitMode,
+    s.buyEntryWindowDays
   ])
 }

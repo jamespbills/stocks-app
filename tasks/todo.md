@@ -1,27 +1,32 @@
-# TODO — TA Charts, Stage 2 (Signals) — COMPLETE 2026-06-05
+# TODO — TA Charts, Stage 3 (Analysis surface — aggregate backtest scoreboard)
 
-Plan: `~/.claude/plans/…immutable-cat.md`. Configurable buy/sell signals on the chart, computed live in
-TS. James's reframe: NO tables — markers on the price line + a hover modal; aggregate analysis is Stage 3.
+Plan: `~/.claude/plans/we-re-building-the-technical-cheerful-kazoo.md` (approved).
+Run the current strategy across the qualifying-play universe, form buy trades, show a scoreboard.
+Compute live in TS (reuse `indicators.ts`), nothing persisted, cohort run in a Web Worker.
 
-- [x] 1. `indicators.ts` — `detectSignals()` + `SignalSettings`/`Signal`/`Grade`/`DEFAULT_SIGNAL_SETTINGS`,
-      ported verbatim from legacy `detect_signals()`. Dedup per MACD-cross bar (last-writer-wins) — see
-      lessons.md.
-- [x] 2. Golden fixture regenerated (now incl. Buy/Sell signal + grade columns; legacy `analyses` folder
-      moved `13_all_plays`→`plays`). `indicators.test.ts` extended: 7/7 pass — buy/sell indices + grades
-      match the legacy CPG.L exactly (6 buys, 13 sells).
-- [x] 3. `types.ts` — `toSignalSettings(TaSettings)` mapper.
-- [x] 4. `chart/model.ts` — `MarkerAnchor` + `MARKER` consts + `nearestReport()`.
-- [x] 5. `chart/ChartStack.tsx` — buy ▲ / sell ▼ markers on the price panel (static layer).
-- [x] 6. `chart/SignalTooltip.tsx` (new) — hover modal: grade, entry RSI/Stoch/MACD, MA pos, stoch-cross +
-      days-between, days-to-nearest-report.
-- [x] 7. `chart/ChartShell.tsx` — signals memo, marker hit-areas, hover wiring, crosshair suppressed while a
-      marker is hovered. `index.tsx` passes `signalSettings`.
-- [x] 8. `settings/SettingsPanel.tsx` — two new sections (Signal rules + Grade thresholds); min 0 for
-      thresholds. Editing re-derives markers live. No migration (006 already seeded the columns).
-- [x] 9. typecheck ✓, lint ✓ 0 warnings, `vitest run` ✓ 7/7, `npm run build` ✓ exit 0.
+## Tasks
+- [x] 1. Migration 008: `app_ta_settings.buy_entry_window_days` (90); threaded `buyEntryWindowDays`
+      through `types.ts`, `useTaSettings.ts`, `UPDATE_TA_SETTINGS_SQL`.
+- [x] 2. `fetchPriceSeriesBatch` in `price-archive/adapters/prices.ts` + `priceSeriesBatchSql` builder.
+- [x] 3. `COHORT_SQL` (view_play_universe ⋈ LEAD next-same-filing) + `analysis/cohort.ts` adapter.
+- [x] 4. `analysis/trades.ts` (`formTrades` + `aggregate`, pure) + `trades.test.ts` — 6 synthetic cases.
+- [x] 5. `analysis/runCohort.ts` (shared pure) + `analysis/aggregate.worker.ts` + inline fallback;
+      driven by `analysis/useCohortRun.ts`.
+- [x] 6. Header Chart/Analysis `SurfaceSwitcher` in `index.tsx` (settings button on both surfaces).
+- [x] 7. `AnalysisSurface` + `Scoreboard` (sortable, grade×MA + Overall) + `DistributionMini`
+      (12-bin) + `TradeDrillDown` slide-over.
+- [x] 8. Settings "Backtest cohort" section (buy entry window + holding fallback).
+- [x] 9. Verify: typecheck ✓, lint ✓ 0 warnings, vitest ✓ 13/13, `npm run build` ✓ (worker chunked).
 
-**Left to James:** visual GUI smoke-test (`npm run dev` → TA Charts → CPG.L) — markers appear; hovering one
-shows the modal with correct stats + days-to-nearest-report; editing a stoch/grade threshold moves/re-grades
-markers live; spot-check one signal vs the legacy `_analysis.xlsx`.
+**Left to James:** GUI smoke-test (`npm run dev` → TA charts → Analysis): scoreboard populates over
+the play universe; editing an indicator/signal/entry-window value in Settings moves the stats live;
+hand-check one ticker's trade (first buy ≤90d, window-end exit at next same-filing report).
 
-Deferred: Stage 3 (analysis surface — cohort builder / scoreboard / aggregate tables), command-palette action.
+## Decisions (from planning interview, 2026-06-05)
+- Buy-only trades. Cohort = view_play_universe.
+- Entry = first buy signal within `buy_entry_window_days` (90d) of a qualifying report; a signal is
+  never consumed by two reports (per-ticker consumed Set, reports processed in date order).
+- Holding window: date_released → next report of same `filing_identifier`; else +chart_window_days_after
+  fallback; clamp to last bar. Exit = window-end (sells ignored for the backtest).
+- Returns: raw close. Group by grade × MA position + Overall row.
+- chart_window_days_after reused as the holding fallback (relabel in UI). No new wireframes.

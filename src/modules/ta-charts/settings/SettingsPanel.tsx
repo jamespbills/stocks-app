@@ -23,6 +23,8 @@ type NumericKey =
   | 'rsiAPlusSell'
   | 'rsiASell'
   | 'rsiBSell'
+  | 'buyEntryWindowDays'
+  | 'chartWindowDaysAfter'
 
 interface FieldDef {
   key: NumericKey
@@ -113,6 +115,21 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
         label: 'Sell B ≥',
         helper: 'Else B when RSI ≥ this (50); otherwise C.',
         min: 0
+      }
+    ]
+  },
+  {
+    title: 'Backtest cohort (Analysis)',
+    fields: [
+      {
+        key: 'buyEntryWindowDays',
+        label: 'Buy entry window',
+        helper: 'Days after a qualifying report a buy signal can open a trade (90).'
+      },
+      {
+        key: 'chartWindowDaysAfter',
+        label: 'Holding fallback',
+        helper: 'Days held when a report has no next same-type successor (365).'
       }
     ]
   }

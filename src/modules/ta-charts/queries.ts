@@ -34,6 +34,40 @@ export const UPDATE_TA_SETTINGS_SQL = `
     buy_stoch_threshold = ?, sell_stoch_threshold = ?, macd_lookahead_days = ?,
     rsi_a_plus_buy = ?, rsi_a_buy = ?, rsi_b_buy = ?,
     rsi_a_plus_sell = ?, rsi_a_sell = ?, rsi_b_sell = ?,
-    chart_window_days_before = ?, chart_window_days_after = ?, exit_mode = ?
+    chart_window_days_before = ?, chart_window_days_after = ?, exit_mode = ?,
+    buy_entry_window_days = ?
   WHERE id = 1
+`
+
+// Stage 3 cohort — every qualifying-play report with its holding-window upper
+// bound (the next report of the SAME filing_identifier for that ticker, which is
+// ~1 year later). Qualification stays single-sourced in view_play_universe (no
+// re-hardcoding play thresholds — §6 guardrail); the LEAD runs over ALL reports
+// of the (ticker, filing_identifier) sequence, not just qualifying ones, so the
+// holding window ends at the genuine next same-type report. No params.
+export const COHORT_SQL = `
+  WITH report_seq AS (
+    SELECT
+      ticker,
+      date_released,
+      filing_identifier,
+      financial_year,
+      LEAD(date_released) OVER (
+        PARTITION BY ticker, filing_identifier
+        ORDER BY date_released
+      ) AS next_same_type_release
+    FROM stock_archive_flat
+    WHERE date_released IS NOT NULL
+  )
+  SELECT
+    u.ticker,
+    u.date_released,
+    rs.filing_identifier,
+    rs.financial_year,
+    rs.next_same_type_release
+  FROM view_play_universe u
+  JOIN report_seq rs
+    ON rs.ticker = u.ticker
+   AND rs.date_released = u.date_released
+  ORDER BY u.ticker, u.date_released
 `

@@ -54,6 +54,21 @@ export const PRICE_SERIES_SQL = `
   ORDER BY trade_date
 `
 
+// Batched price series for many tickers at once — one round-trip for the TA
+// Stage 3 cohort run (~92 tickers) instead of N IPC calls. Build the IN list of
+// placeholders dynamically; params are [...tickers, from, to]. Same column shape
+// as PRICE_SERIES_SQL (+ ticker so the rows can be grouped).
+export function priceSeriesBatchSql(tickerCount: number): string {
+  const placeholders = Array.from({ length: tickerCount }, () => '?').join(', ')
+  return `
+    SELECT ticker, trade_date, open_price, high_price, low_price, close_price, adj_close_price, volume
+    FROM fact_historical_prices
+    WHERE ticker IN (${placeholders})
+      AND trade_date BETWEEN ? AND ?
+    ORDER BY ticker, trade_date
+  `
+}
+
 // 5.6 Settings (read).
 export const SETTINGS_SQL = `SELECT * FROM app_archive_settings WHERE id = 1`
 
