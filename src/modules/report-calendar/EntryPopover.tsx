@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Popover } from '../../components/Popover'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { CalendarEntry, EntryStatus } from './types'
 
 interface EntryPopoverProps {
@@ -17,18 +18,6 @@ function statusLabel(status: EntryStatus, daysToGo: number): string {
   return `in ${daysToGo}d`
 }
 
-function playColor(score: number | null): string {
-  if (score === 13) return 'var(--color-play-13-text)'
-  if (score === 12) return 'var(--color-play-12-text)'
-  return 'var(--color-text-muted)'
-}
-
-function play2Color(score: number | null): string {
-  if (score === 14) return 'var(--color-play-13-text)'
-  if (score === 13) return 'var(--color-play-12-text)'
-  return 'var(--color-text-muted)'
-}
-
 function statusColor(status: EntryStatus): string {
   if (status === 'overdue') return 'var(--color-danger)'
   if (status === 'amber') return 'var(--color-warning)'
@@ -42,6 +31,20 @@ export function EntryPopover({
   onNavigate,
   onDisregard
 }: EntryPopoverProps): ReactElement {
+  const thresholds = usePlayThresholds()
+
+  function playColor(score: number | null): string {
+    if (score === thresholds.play.maxScore) return 'var(--color-play-13-text)'
+    if (score === thresholds.play.nearMiss) return 'var(--color-play-12-text)'
+    return 'var(--color-text-muted)'
+  }
+
+  function play2Color(score: number | null): string {
+    if (score === thresholds.play_2.maxScore) return 'var(--color-play-13-text)'
+    if (score === thresholds.play_2.nearMiss) return 'var(--color-play-12-text)'
+    return 'var(--color-text-muted)'
+  }
+
   return (
     <Popover onDismiss={onDismiss} anchorEl={anchorEl} width={240}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -114,7 +117,10 @@ export function EntryPopover({
           )}
         </div>
       )}
-      {(entry.r_play != null || entry.r_play_2 != null || entry.p_play != null || entry.p_play_2 != null) && (
+      {(entry.r_play != null ||
+        entry.r_play_2 != null ||
+        entry.p_play != null ||
+        entry.p_play_2 != null) && (
         <div
           style={{
             display: 'grid',
@@ -127,12 +133,18 @@ export function EntryPopover({
             borderRadius: 4
           }}
         >
-          {([
-            { label: 'R · PLAY', value: entry.r_play, colorFn: playColor },
-            { label: 'R · PLAY 2', value: entry.r_play_2, colorFn: play2Color },
-            { label: 'P · PLAY', value: entry.p_play, colorFn: playColor },
-            { label: 'P · PLAY 2', value: entry.p_play_2, colorFn: play2Color }
-          ] as Array<{ label: string; value: number | null; colorFn: (s: number | null) => string }>).map(({ label, value, colorFn }) => (
+          {(
+            [
+              { label: 'R · PLAY', value: entry.r_play, colorFn: playColor },
+              { label: 'R · PLAY 2', value: entry.r_play_2, colorFn: play2Color },
+              { label: 'P · PLAY', value: entry.p_play, colorFn: playColor },
+              { label: 'P · PLAY 2', value: entry.p_play_2, colorFn: play2Color }
+            ] as Array<{
+              label: string
+              value: number | null
+              colorFn: (s: number | null) => string
+            }>
+          ).map(({ label, value, colorFn }) => (
             <div key={label}>
               <div
                 style={{

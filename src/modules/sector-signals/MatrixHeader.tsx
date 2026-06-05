@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { Strategy } from './types'
 
 interface MatrixHeaderProps {
@@ -20,6 +21,7 @@ export function MatrixHeader({
   onRefresh,
   onOpenLeaderboard
 }: MatrixHeaderProps): ReactElement {
+  const thresholds = usePlayThresholds()
   return (
     <div
       style={{
@@ -85,7 +87,9 @@ export function MatrixHeader({
                   whiteSpace: 'nowrap'
                 }}
               >
-                {s === 'play' ? 'play · = 12' : 'play_2 · = 13'}
+                {s === 'play'
+                  ? `play · = ${thresholds.play.nearMiss}`
+                  : `play_2 · = ${thresholds.play_2.nearMiss}`}
               </button>
             )
           })}

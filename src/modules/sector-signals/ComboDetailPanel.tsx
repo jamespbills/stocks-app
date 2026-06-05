@@ -348,15 +348,23 @@ export function ComboDetailPanel({
                   borderBottom: '1px solid var(--color-border-subtle)'
                 }}
               >
-                <MutedLabel mono size={10}>TICKER</MutedLabel>
+                <MutedLabel mono size={10}>
+                  TICKER
+                </MutedLabel>
                 <div style={{ textAlign: 'right' }}>
-                  <MutedLabel mono size={10}>6M</MutedLabel>
+                  <MutedLabel mono size={10}>
+                    6M
+                  </MutedLabel>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <MutedLabel mono size={10}>1Y</MutedLabel>
+                  <MutedLabel mono size={10}>
+                    1Y
+                  </MutedLabel>
                 </div>
                 <div style={{ paddingLeft: 12 }}>
-                  <MutedLabel mono size={10}>REPORT</MutedLabel>
+                  <MutedLabel mono size={10}>
+                    REPORT
+                  </MutedLabel>
                 </div>
               </div>
 

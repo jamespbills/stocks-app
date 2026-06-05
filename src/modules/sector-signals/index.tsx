@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type ReactElement } from 'react'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type {
   Strategy,
   SectorGroup,
@@ -143,6 +144,7 @@ function buildGroups(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SectorSignals(): ReactElement {
+  const thresholds = usePlayThresholds()
   const [strategy, setStrategy] = useState<Strategy>('play')
   const [groups, setGroups] = useState<SectorGroup[]>([])
   const [pendingChanges, setPendingChanges] = useState<Map<string, PendingChange>>(new Map())
@@ -227,7 +229,8 @@ export default function SectorSignals(): ReactElement {
     (newStrat: Strategy) => {
       if (newStrat === strategy) return
       if (pendingChanges.size > 0) {
-        const label = strategy === 'play' ? 'play · = 12' : 'play_2 · = 13'
+        const nearMiss = strategy === 'play' ? thresholds.play.nearMiss : thresholds.play_2.nearMiss
+        const label = strategy === 'play' ? `play · = ${nearMiss}` : `play_2 · = ${nearMiss}`
         const ok = window.confirm(
           `You have ${pendingChanges.size} pending ${pendingChanges.size === 1 ? 'change' : 'changes'} for ${label}. Switch without applying? Changes will be discarded.`
         )
@@ -239,7 +242,7 @@ export default function SectorSignals(): ReactElement {
       setApplyError(null)
       setStrategy(newStrat)
     },
-    [strategy, pendingChanges]
+    [strategy, pendingChanges, thresholds.play.nearMiss, thresholds.play_2.nearMiss]
   )
 
   // ── Expand / collapse ──────────────────────────────────────────────────────
@@ -268,9 +271,12 @@ export default function SectorSignals(): ReactElement {
 
       try {
         const tickerSql = strategy === 'play' ? COMBO_TICKERS_PLAY_SQL : COMBO_TICKERS_PLAY2_SQL
+        const nearMiss = strategy === 'play' ? thresholds.play.nearMiss : thresholds.play_2.nearMiss
 
         const [tickerRows, noteRows, tickerNoteRows] = await Promise.all([
-          window.electronAPI.db.query(tickerSql, [sector, criterionCode]) as Promise<TickerRow[]>,
+          window.electronAPI.db.query(tickerSql, [nearMiss, sector, criterionCode]) as Promise<
+            TickerRow[]
+          >,
           window.electronAPI.db.query(SELECT_COMBO_NOTE_SQL, [
             strategy,
             sector,
@@ -297,7 +303,10 @@ export default function SectorSignals(): ReactElement {
               ? (r.report_date as unknown as Date).toISOString()
               : String(r.report_date)
             : null,
-          financialYear: r.financial_year !== null && r.financial_year !== undefined ? Number(r.financial_year) : null,
+          financialYear:
+            r.financial_year !== null && r.financial_year !== undefined
+              ? Number(r.financial_year)
+              : null,
           filingIdentifier: r.filing_identifier ?? null,
           note: noteMap.get(r.ticker) ?? ''
         }))
@@ -326,7 +335,7 @@ export default function SectorSignals(): ReactElement {
         // Detail panel stays with empty tickers
       }
     },
-    [groups, strategy]
+    [groups, strategy, thresholds.play.nearMiss, thresholds.play_2.nearMiss]
   )
 
   // ── Toggle a combo's active state (queue a pending change) ─────────────────

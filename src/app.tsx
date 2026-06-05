@@ -4,6 +4,7 @@ import { TitleBar } from './shell/title-bar'
 import { Sidebar } from './shell/sidebar'
 import { CommandPalette } from './shell/command-palette'
 import { useZoom } from './hooks/useZoom'
+import { PlayThresholdsProvider } from './lib/playThresholds'
 
 export default function App(): ReactElement {
   useZoom()
@@ -47,22 +48,24 @@ export default function App(): ReactElement {
   }, [])
 
   return (
-    <RouterProvider>
-      {(activeId) => (
-        <div
-          className="flex flex-col h-screen overflow-hidden"
-          style={{ background: 'var(--color-bg-base)' }}
-        >
-          <TitleBar />
-          <div className="flex flex-1 min-h-0 overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-auto min-w-0">
-              <ActiveModule moduleId={activeId} />
-            </main>
+    <PlayThresholdsProvider>
+      <RouterProvider>
+        {(activeId) => (
+          <div
+            className="flex flex-col h-screen overflow-hidden"
+            style={{ background: 'var(--color-bg-base)' }}
+          >
+            <TitleBar />
+            <div className="flex flex-1 min-h-0 overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 overflow-auto min-w-0">
+                <ActiveModule moduleId={activeId} />
+              </main>
+            </div>
+            <CommandPalette key={paletteKey} isOpen={paletteOpen} onClose={closePalette} />
           </div>
-          <CommandPalette key={paletteKey} isOpen={paletteOpen} onClose={closePalette} />
-        </div>
-      )}
-    </RouterProvider>
+        )}
+      </RouterProvider>
+    </PlayThresholdsProvider>
   )
 }

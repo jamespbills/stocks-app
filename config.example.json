@@ -14,5 +14,15 @@
     "finnhub": "",
     "fmp": ""
   },
-  "scripts": []
+  "scripts": [
+    {
+      "id": "populate_matrices",
+      "label": "Matrix Sync",
+      "script": "C:\\path\\to\\Database Project\\Python Scripts\\populate_matrices_2.py",
+      "category": "Database",
+      "args": [
+        { "name": "--dry-run", "type": "flag", "required": false }
+      ]
+    }
+  ]
 }

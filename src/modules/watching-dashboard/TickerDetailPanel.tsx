@@ -4,6 +4,7 @@ import { MutedLabel } from '../../components/MutedLabel'
 import { PlayPill } from './PlayPill'
 import { ChangeCell } from './ChangeCell'
 import { formatDate, formatPercent } from '../../lib/format'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { WatchingRow } from './types'
 
 interface TickerDetailPanelProps {
@@ -139,6 +140,7 @@ export function TickerDetailPanel({
   onClose,
   onNavigate
 }: TickerDetailPanelProps): ReactElement {
+  const thresholds = usePlayThresholds()
   return (
     <SlideOverPanel width={420}>
       {/* Header */}
@@ -219,10 +221,10 @@ export function TickerDetailPanel({
         <SectionLabel>Play scores</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
           <StatCard label="play">
-            <PlayPill score={row.play} maxScore={13} />
+            <PlayPill score={row.play} maxScore={thresholds.play.maxScore} />
           </StatCard>
           <StatCard label="play_2">
-            <PlayPill score={row.play_2} maxScore={14} />
+            <PlayPill score={row.play_2} maxScore={thresholds.play_2.maxScore} />
           </StatCard>
         </div>
 

@@ -20,7 +20,7 @@ export const ACTIVE_MATRIX_PLAY2_SQL = `
   FROM dim_sector_play_2_matrix
 `
 
-// Ticker list for a play=12 combo — params: [sector, criterionCode]
+// Ticker list for a near-miss play combo — params: [nearMiss, sector, criterionCode]
 // Columns: ticker, roi (decimal fraction), report_date, financial_year, filing_identifier, roi_6m
 export const COMBO_TICKERS_PLAY_SQL = `
   SELECT
@@ -44,13 +44,13 @@ export const COMBO_TICKERS_PLAY_SQL = `
   LEFT JOIN fact_metrics fm_6m     ON fr.report_id   = fm_6m.report_id
                                   AND fm_6m.metric_id = (
                                     SELECT metric_id FROM dim_metrics WHERE name = 'return_6m')
-  WHERE fm_play.value = 12
+  WHERE fm_play.value = ?
     AND dc.sector = ?
     AND fm_miss.value = ?
   ORDER BY fm_ret.value DESC
 `
 
-// Ticker list for a play_2=13 combo — params: [sector, criterionCode]
+// Ticker list for a near-miss play_2 combo — params: [nearMiss, sector, criterionCode]
 export const COMBO_TICKERS_PLAY2_SQL = `
   SELECT
     dc.ticker,
@@ -73,7 +73,7 @@ export const COMBO_TICKERS_PLAY2_SQL = `
   LEFT JOIN fact_metrics fm_6m     ON fr.report_id   = fm_6m.report_id
                                   AND fm_6m.metric_id = (
                                     SELECT metric_id FROM dim_metrics WHERE name = 'return_6m')
-  WHERE fm_play.value = 13
+  WHERE fm_play.value = ?
     AND dc.sector = ?
     AND fm_miss.value = ?
   ORDER BY fm_ret.value DESC
@@ -122,7 +122,8 @@ export const UPSERT_TICKER_NOTE_SQL = `
   ON DUPLICATE KEY UPDATE note = VALUES(note)
 `
 
-// Leaderboard aggregate for play=12 — all combos ranked by cumulative return
+// Leaderboard aggregate for near-miss play — all combos ranked by cumulative return
+// params: [nearMiss]
 // Columns: sector, criterion_code, n_plays, n_unique_tickers, wins, losses,
 //          avg_roi, cumulative_roi, median_roi (all decimal fractions), is_active (0|1)
 export const COMBO_LEADERBOARD_PLAY_SQL = `
@@ -146,7 +147,7 @@ export const COMBO_LEADERBOARD_PLAY_SQL = `
     JOIN fact_metrics fm_ret
       ON fr.report_id     = fm_ret.report_id
      AND fm_ret.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
-    WHERE fm_play.value = 12
+    WHERE fm_play.value = ?
       AND fm_ret.value IS NOT NULL
   )
   SELECT
@@ -171,7 +172,8 @@ export const COMBO_LEADERBOARD_PLAY_SQL = `
   ORDER BY SUM(b.roi) DESC
 `
 
-// Leaderboard aggregate for play_2=13 — same shape as above
+// Leaderboard aggregate for near-miss play_2 — same shape as above
+// params: [nearMiss]
 export const COMBO_LEADERBOARD_PLAY2_SQL = `
   WITH base AS (
     SELECT
@@ -193,7 +195,7 @@ export const COMBO_LEADERBOARD_PLAY2_SQL = `
     JOIN fact_metrics fm_ret
       ON fr.report_id     = fm_ret.report_id
      AND fm_ret.metric_id = (SELECT metric_id FROM dim_metrics WHERE name = 'return_1y')
-    WHERE fm_play.value = 13
+    WHERE fm_play.value = ?
       AND fm_ret.value IS NOT NULL
   )
   SELECT

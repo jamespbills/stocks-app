@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, type ReactElement, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { Strategy, ComboLeaderboardRow } from './types'
 import { CRITERION_NAMES, signalStrength } from './types'
 import { COMBO_LEADERBOARD_PLAY_SQL, COMBO_LEADERBOARD_PLAY2_SQL } from './queries'
@@ -114,6 +115,7 @@ const HDR_BASE: CSSProperties = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): ReactElement {
+  const thresholds = usePlayThresholds()
   const [strategy, setStrategy] = useState<Strategy>(initialStrategy)
   // loadedStrategy tracks which strategy's data is currently in `rows`.
   // isLoading is derived: true while loadedStrategy !== strategy.
@@ -128,8 +130,9 @@ export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): Reac
   useEffect(() => {
     let cancelled = false
     const sql = strategy === 'play' ? COMBO_LEADERBOARD_PLAY_SQL : COMBO_LEADERBOARD_PLAY2_SQL
+    const nearMiss = strategy === 'play' ? thresholds.play.nearMiss : thresholds.play_2.nearMiss
 
-    ;(window.electronAPI.db.query(sql) as Promise<LeaderboardDbRow[]>)
+    ;(window.electronAPI.db.query(sql, [nearMiss]) as Promise<LeaderboardDbRow[]>)
       .then((dbRows) => {
         if (cancelled) return
         setRows(dbRows.map(mapRow))
@@ -145,7 +148,7 @@ export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): Reac
     return () => {
       cancelled = true
     }
-  }, [strategy])
+  }, [strategy, thresholds.play.nearMiss, thresholds.play_2.nearMiss])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -276,7 +279,9 @@ export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): Reac
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      {s === 'play' ? 'play · = 12' : 'play_2 · = 13'}
+                      {s === 'play'
+                        ? `play · = ${thresholds.play.nearMiss}`
+                        : `play_2 · = ${thresholds.play_2.nearMiss}`}
                     </button>
                   )
                 })}
@@ -378,10 +383,7 @@ export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): Reac
                 <div style={hdrSort('nPlays')} onClick={() => handleSort('nPlays')}>
                   PLAYS{sortIndicator('nPlays')}
                 </div>
-                <div
-                  style={hdrSort('nUniqueTickers')}
-                  onClick={() => handleSort('nUniqueTickers')}
-                >
+                <div style={hdrSort('nUniqueTickers')} onClick={() => handleSort('nUniqueTickers')}>
                   TICKERS{sortIndicator('nUniqueTickers')}
                 </div>
                 <div style={hdrSort('wins')} onClick={() => handleSort('wins')}>
@@ -463,9 +465,7 @@ export function ComboLeaderboardModal({ initialStrategy, onClose }: Props): Reac
                       {row.criterionName}
                     </span>
 
-                    <span style={{ ...mono, color: 'var(--color-text-muted)' }}>
-                      {row.nPlays}
-                    </span>
+                    <span style={{ ...mono, color: 'var(--color-text-muted)' }}>{row.nPlays}</span>
 
                     <span style={{ ...mono, color: 'var(--color-text-muted)' }}>
                       {row.nUniqueTickers}
