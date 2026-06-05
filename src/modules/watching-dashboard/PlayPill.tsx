@@ -39,7 +39,7 @@ export function PlayPill({
       : undefined
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle' }}>
       <span
         title={tooltip}
         style={{
@@ -65,6 +65,7 @@ export function PlayPill({
             fontFamily: 'var(--font-mono)',
             fontSize: 10,
             fontWeight: 500,
+            lineHeight: 1,
             color: 'var(--color-up)',
             letterSpacing: '0.5px'
           }}

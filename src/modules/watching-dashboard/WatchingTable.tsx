@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useMemo, type ReactElement } from 'reac
 import { PlayPill } from './PlayPill'
 import { ChangeCell } from './ChangeCell'
 import { formatDate } from '../../lib/format'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { WatchingRow, SortState } from './types'
 
 interface ColDef {
@@ -17,8 +18,8 @@ const COLS: ColDef[] = [
   { key: 'company', label: 'COMPANY', align: 'left', width: null, dropAt: 980 },
   { key: 'live_price', label: 'LAST', align: 'right', width: 88, dropAt: null },
   { key: 'pct_change', label: 'CHG %', align: 'right', width: 86, dropAt: null },
-  { key: 'play', label: 'PLAY', align: 'left', width: 68, dropAt: null },
-  { key: 'play_2', label: 'PLAY 2', align: 'left', width: 76, dropAt: null },
+  { key: 'play', label: 'PLAY', align: 'left', width: 90, dropAt: null },
+  { key: 'play_2', label: 'PLAY 2', align: 'left', width: 90, dropAt: null },
   { key: 'sector', label: 'SECTOR', align: 'left', width: 130, dropAt: 1100 },
   { key: 'date_released', label: 'LAST REPORT', align: 'left', width: 145, dropAt: 820 },
   { key: 'portfolio', label: '', align: 'left', width: 36, dropAt: null }
@@ -87,6 +88,7 @@ export function WatchingTable({
   onPortfolioToggle
 }: WatchingTableProps): ReactElement {
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
+  const thresholds = usePlayThresholds()
 
   const sectorWidth = useMemo(() => {
     if (!rows.length) return 160
@@ -222,10 +224,10 @@ export function WatchingTable({
         )
       case 'play':
         return (
-          <td key={col.key} style={cellStyle}>
+          <td key={col.key} style={{ ...cellStyle, textOverflow: 'clip' }}>
             <PlayPill
               score={row.play}
-              maxScore={13}
+              maxScore={thresholds.play.maxScore}
               sectorPlay={(row.play_sector_rating ?? 0) > 0}
               sectorName={row.sector}
               missedCriterion={row.missed_upon}
@@ -234,8 +236,14 @@ export function WatchingTable({
         )
       case 'play_2':
         return (
-          <td key={col.key} style={cellStyle}>
-            <PlayPill score={row.play_2} maxScore={14} />
+          <td key={col.key} style={{ ...cellStyle, textOverflow: 'clip' }}>
+            <PlayPill
+              score={row.play_2}
+              maxScore={thresholds.play_2.maxScore}
+              sectorPlay={(row.play_2_sector_rating ?? 0) > 0}
+              sectorName={row.sector}
+              missedCriterion={row.missed_upon_2}
+            />
           </td>
         )
       case 'sector':
