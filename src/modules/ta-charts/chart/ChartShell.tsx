@@ -1,25 +1,43 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { formatDate } from '../../../lib/format'
-import { computeIndicators, type IndicatorPeriods } from '../indicators'
+import {
+  computeIndicators,
+  detectSignals,
+  type IndicatorPeriods,
+  type SignalSettings
+} from '../indicators'
 import type { PriceBar } from '../../price-archive/types'
 import type { ReportMarker } from '../types'
-import { buildGeometry, indexForX, xForIndex } from './geometry'
-import { axisTicks, macdAbs, priceRange, reportAnchors, toArrays, volMax } from './model'
+import { buildGeometry, indexForX, xForIndex, yForValue } from './geometry'
+import {
+  axisTicks,
+  macdAbs,
+  nearestReport,
+  priceRange,
+  reportAnchors,
+  toArrays,
+  volMax,
+  MARKER,
+  type MarkerAnchor
+} from './model'
 import { ChartStack, type ChartRanges } from './ChartStack'
 import { CrosshairOverlay } from './CrosshairOverlay'
 import { HoverTooltip } from './HoverTooltip'
+import { SignalTooltip } from './SignalTooltip'
 
 interface Props {
   bars: PriceBar[]
   reports: ReportMarker[]
   periods: IndicatorPeriods
+  signalSettings: SignalSettings
 }
 
-export function ChartShell({ bars, reports, periods }: Props): ReactElement {
+export function ChartShell({ bars, reports, periods, signalSettings }: Props): ReactElement {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const [hoveredReport, setHoveredReport] = useState<number | null>(null)
+  const [hoveredSignal, setHoveredSignal] = useState<number | null>(null)
 
   useEffect(() => {
     if (!container) return
@@ -45,10 +63,35 @@ export function ChartShell({ bars, reports, periods }: Props): ReactElement {
   const ticks = useMemo(() => axisTicks(arrays.dates), [arrays.dates])
   const anchors = useMemo(() => reportAnchors(reports, arrays.dates), [reports, arrays.dates])
 
+  // Signals recompute live when a rule changes (same calibration loop as periods).
+  const signals = useMemo(
+    () => detectSignals(indicators, signalSettings),
+    [indicators, signalSettings]
+  )
+
   const geom = useMemo(
     () => (size ? buildGeometry(size.w, size.h, bars.length) : null),
     [size, bars.length]
   )
+
+  // Marker anchors (x + price-point y) — shared by the drawn triangles and the
+  // hover hit-areas so they stay aligned.
+  const markers: MarkerAnchor[] = useMemo(() => {
+    if (!geom) return []
+    return signals.map((signal) => ({
+      signal,
+      x: xForIndex(geom, signal.index),
+      y: yForValue(
+        arrays.close[signal.index],
+        geom.panelY.price,
+        geom.panelH.price,
+        ranges.price.lo,
+        ranges.price.hi,
+        14,
+        8
+      )
+    }))
+  }, [signals, geom, arrays.close, ranges.price])
 
   return (
     <div style={{ flex: 1, minHeight: 0, padding: 16 }}>
@@ -79,6 +122,7 @@ export function ChartShell({ bars, reports, periods }: Props): ReactElement {
               ranges={ranges}
               ticks={ticks}
               reports={anchors}
+              markers={markers}
               periods={periods}
             />
 
@@ -119,7 +163,29 @@ export function ChartShell({ bars, reports, periods }: Props): ReactElement {
               )
             })}
 
-            {hoverIndex !== null && (
+            {/* Signal marker hit-areas — generous targets over each triangle.
+                On hover, the signal modal shows and the crosshair read-out is
+                suppressed so the two don't stack. */}
+            {markers.map((m, k) => {
+              const cy = m.signal.type === 'buy' ? m.y + MARKER.dy : m.y - MARKER.dy
+              return (
+                <div
+                  key={k}
+                  onMouseEnter={() => setHoveredSignal(k)}
+                  onMouseLeave={() => setHoveredSignal(null)}
+                  style={{
+                    position: 'absolute',
+                    left: m.x - MARKER.hit / 2,
+                    top: cy - MARKER.hit / 2,
+                    width: MARKER.hit,
+                    height: MARKER.hit,
+                    cursor: 'default'
+                  }}
+                />
+              )
+            })}
+
+            {hoverIndex !== null && hoveredSignal === null && (
               <>
                 <CrosshairOverlay
                   geom={geom}
@@ -145,6 +211,31 @@ export function ChartShell({ bars, reports, periods }: Props): ReactElement {
                 cardWidth={geom.width}
               />
             )}
+
+            {hoveredSignal !== null &&
+              markers[hoveredSignal] &&
+              (() => {
+                const m = markers[hoveredSignal]
+                const i = m.signal.index
+                return (
+                  <SignalTooltip
+                    type={m.signal.type}
+                    grade={m.signal.grade}
+                    signalDate={arrays.dates[i]}
+                    entryClose={arrays.close[i]}
+                    rsi={indicators.rsi[i]}
+                    stochK={indicators.stochK[i]}
+                    macd={indicators.macd[i]}
+                    maPosition={indicators.maPosition[i]}
+                    stochCrossDate={arrays.dates[m.signal.stochCrossIndex]}
+                    daysBetween={m.signal.daysBetween}
+                    nearest={nearestReport(arrays.dates[i], reports)}
+                    x={m.x}
+                    top={geom.panelY.price + 12}
+                    cardWidth={geom.width}
+                  />
+                )
+              })()}
           </>
         )}
       </div>

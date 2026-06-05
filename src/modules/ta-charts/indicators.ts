@@ -193,3 +193,151 @@ export function computeIndicators(
     rsi: rsi(close, periods.rsiPeriod)
   }
 }
+
+// ── Signal detection (Stage 2) ──────────────────────────────────────────────
+// Ported VERBATIM from technical_analysis_batch.py detect_signals(). Like the
+// indicators, this is unit-tested to exact parity against the legacy golden xlsx
+// (Buy_Signal/Buy_Quality/Sell_Signal/Sell_Quality columns). Computed live in
+// the renderer — nothing persisted.
+
+export type Grade = 'A+' | 'A' | 'B' | 'C'
+
+export interface SignalSettings {
+  buyStochThreshold: number
+  sellStochThreshold: number
+  macdLookaheadDays: number
+  // RSI grade cutoffs (evaluated on the MACD-cross day)
+  rsiAPlusBuy: number
+  rsiABuy: number
+  rsiBBuy: number
+  rsiAPlusSell: number
+  rsiASell: number
+  rsiBSell: number
+}
+
+export const DEFAULT_SIGNAL_SETTINGS: SignalSettings = {
+  buyStochThreshold: 20,
+  sellStochThreshold: 80,
+  macdLookaheadDays: 5,
+  rsiAPlusBuy: 30,
+  rsiABuy: 40,
+  rsiBBuy: 50,
+  rsiAPlusSell: 70,
+  rsiASell: 60,
+  rsiBSell: 50
+}
+
+export interface Signal {
+  type: 'buy' | 'sell'
+  index: number // the MACD-cross bar — the signal date
+  grade: Grade
+  stochCrossIndex: number // the preceding Stochastic-cross bar
+  daysBetween: number // index − stochCrossIndex (bars, mirrors legacy Days_Between)
+}
+
+// A crossover of `a` above `b` at bar i. Any null operand → false (matches the
+// pandas NaN-comparison-is-false semantics of the legacy shift() crosses).
+function crossesUp(a: Num[], b: Num[], i: number): boolean {
+  const ai = a[i]
+  const bi = b[i]
+  const ap = a[i - 1]
+  const bp = b[i - 1]
+  if (ai === null || bi === null || ap === null || bp === null) return false
+  return ai > bi && ap <= bp
+}
+
+function crossesDown(a: Num[], b: Num[], i: number): boolean {
+  const ai = a[i]
+  const bi = b[i]
+  const ap = a[i - 1]
+  const bp = b[i - 1]
+  if (ai === null || bi === null || ap === null || bp === null) return false
+  return ai < bi && ap >= bp
+}
+
+function buyGrade(rsiVal: number, s: SignalSettings): Grade {
+  if (rsiVal <= s.rsiAPlusBuy) return 'A+'
+  if (rsiVal <= s.rsiABuy) return 'A'
+  if (rsiVal <= s.rsiBBuy) return 'B'
+  return 'C'
+}
+
+function sellGrade(rsiVal: number, s: SignalSettings): Grade {
+  if (rsiVal >= s.rsiAPlusSell) return 'A+'
+  if (rsiVal >= s.rsiASell) return 'A'
+  if (rsiVal >= s.rsiBSell) return 'B'
+  return 'C'
+}
+
+/**
+ * Detect buy + sell signals across a computed indicator series.
+ *
+ * Buy:  Stochastic crosses up with %K below `buyStochThreshold` the day before,
+ *       then MACD crosses up within 0–`macdLookaheadDays` days with MACD negative
+ *       the day before and a positive histogram on the cross. Grade by RSI.
+ * Sell: the mirror image. (See detect_signals() for the canonical statement.)
+ */
+export function detectSignals(
+  ind: IndicatorSeries,
+  settings: SignalSettings = DEFAULT_SIGNAL_SETTINGS
+): Signal[] {
+  const { stochK, stochD, macd, macdSignal, macdHist, rsi: rsiSeries } = ind
+  const n = stochK.length
+  const lookahead = settings.macdLookaheadDays
+  // Keyed by the MACD-cross bar. The legacy code writes a boolean column, so two
+  // Stochastic crosses resolving to the same MACD cross collapse to one signal —
+  // and because it loops i ascending and overwrites, the LAST (largest) stoch
+  // cross wins for the recorded cross-date/days-between. A Map with set() in i
+  // order reproduces both behaviours.
+  const buys = new Map<number, Signal>()
+  const sells = new Map<number, Signal>()
+
+  for (let i = 2; i < n; i++) {
+    if (!crossesUp(stochK, stochD, i)) continue
+    const kPrev = stochK[i - 1]
+    if (kPrev === null || kPrev >= settings.buyStochThreshold) continue
+    for (let j = i; j < Math.min(i + lookahead + 1, n); j++) {
+      if (!crossesUp(macd, macdSignal, j)) continue
+      const macdPrev = macd[j - 1]
+      const hist = macdHist[j]
+      if (macdPrev === null || hist === null) continue
+      if (macdPrev < 0 && hist > 0) {
+        const r = rsiSeries[j]
+        buys.set(j, {
+          type: 'buy',
+          index: j,
+          grade: r === null ? 'C' : buyGrade(r, settings),
+          stochCrossIndex: i,
+          daysBetween: j - i
+        })
+        break
+      }
+    }
+  }
+
+  for (let i = 2; i < n; i++) {
+    if (!crossesDown(stochK, stochD, i)) continue
+    const kPrev = stochK[i - 1]
+    if (kPrev === null || kPrev <= settings.sellStochThreshold) continue
+    for (let j = i; j < Math.min(i + lookahead + 1, n); j++) {
+      if (!crossesDown(macd, macdSignal, j)) continue
+      const macdPrev = macd[j - 1]
+      const hist = macdHist[j]
+      if (macdPrev === null || hist === null) continue
+      if (macdPrev > 0 && hist < 0) {
+        const r = rsiSeries[j]
+        sells.set(j, {
+          type: 'sell',
+          index: j,
+          grade: r === null ? 'C' : sellGrade(r, settings),
+          stochCrossIndex: i,
+          daysBetween: j - i
+        })
+        break
+      }
+    }
+  }
+
+  const byIndex = (a: Signal, b: Signal): number => a.index - b.index
+  return [...[...buys.values()].sort(byIndex), ...[...sells.values()].sort(byIndex)]
+}

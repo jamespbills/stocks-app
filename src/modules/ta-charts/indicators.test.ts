@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import fixture from './__fixtures__/cpg-analysis.json'
-import { computeIndicators, type IndicatorPeriods, type OhlcBar, type Num } from './indicators'
+import {
+  computeIndicators,
+  detectSignals,
+  DEFAULT_SIGNAL_SETTINGS,
+  type IndicatorPeriods,
+  type OhlcBar,
+  type Num
+} from './indicators'
 
 // Golden-series parity test. The fixture is the exact output of the legacy
 // technical_analysis_batch.py for CPG.L (504 daily bars). We feed its raw OHLC
@@ -74,5 +81,38 @@ describe('computeIndicators — parity with legacy technical_analysis_batch.py (
 
   it('RSI(14) matches to 6dp', () => {
     expectSeriesMatch('rsi', result.rsi, fixture.expected.rsi)
+  })
+})
+
+// Signal-detection parity (Stage 2). detectSignals under the legacy default
+// thresholds must reproduce the xlsx Buy_Signal/Buy_Quality/Sell_Signal/
+// Sell_Quality columns exactly — same bar indices, same grades.
+describe('detectSignals — parity with legacy detect_signals() (CPG.L)', () => {
+  const signals = detectSignals(result, DEFAULT_SIGNAL_SETTINGS)
+
+  type Expected = { index: number; grade: string }
+  const expectedOf = (flags: boolean[], grades: (string | null)[]): Expected[] => {
+    const out: Expected[] = []
+    for (let i = 0; i < flags.length; i++) {
+      if (flags[i]) out.push({ index: i, grade: grades[i] ?? 'C' })
+    }
+    return out
+  }
+  const gotOf = (type: 'buy' | 'sell'): Expected[] =>
+    signals
+      .filter((s) => s.type === type)
+      .map((s) => ({ index: s.index, grade: s.grade }))
+      .sort((a, b) => a.index - b.index)
+
+  it('buy signals + grades match the legacy columns', () => {
+    const want = expectedOf(fixture.expected.buySignal, fixture.expected.buyQuality)
+    expect(want.length, 'fixture should contain buy signals').toBeGreaterThan(0)
+    expect(gotOf('buy')).toEqual(want)
+  })
+
+  it('sell signals + grades match the legacy columns', () => {
+    const want = expectedOf(fixture.expected.sellSignal, fixture.expected.sellQuality)
+    expect(want.length, 'fixture should contain sell signals').toBeGreaterThan(0)
+    expect(gotOf('sell')).toEqual(want)
   })
 })

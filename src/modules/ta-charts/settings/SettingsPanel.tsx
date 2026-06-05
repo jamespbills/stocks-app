@@ -2,9 +2,10 @@ import { useState, type CSSProperties, type ReactElement } from 'react'
 import type { TaSettings } from '../types'
 import { saveTaSettings } from './useTaSettings'
 
-// Stage 1 exposes only the indicator periods. Editing one re-derives the chart
-// instantly (pure-TS recompute) once saved — the calibration loop in miniature.
-type PeriodKey =
+// The panel edits the indicator periods (Stage 1) plus the signal rules + grade
+// thresholds (Stage 2). Editing any field re-derives the chart/markers instantly
+// (pure-TS recompute) once saved — the calibration loop in miniature.
+type NumericKey =
   | 'smaWindow'
   | 'macdFast'
   | 'macdSlow'
@@ -13,11 +14,21 @@ type PeriodKey =
   | 'stochKSmooth'
   | 'stochDSmooth'
   | 'rsiPeriod'
+  | 'buyStochThreshold'
+  | 'sellStochThreshold'
+  | 'macdLookaheadDays'
+  | 'rsiAPlusBuy'
+  | 'rsiABuy'
+  | 'rsiBBuy'
+  | 'rsiAPlusSell'
+  | 'rsiASell'
+  | 'rsiBSell'
 
 interface FieldDef {
-  key: PeriodKey
+  key: NumericKey
   label: string
   helper: string
+  min?: number // default 1 (periods); thresholds allow 0
 }
 
 const SECTIONS: { title: string; fields: FieldDef[] }[] = [
@@ -50,6 +61,60 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
   {
     title: 'RSI',
     fields: [{ key: 'rsiPeriod', label: 'RSI period', helper: 'Wilder smoothing length (14).' }]
+  },
+  {
+    title: 'Signal rules',
+    fields: [
+      {
+        key: 'buyStochThreshold',
+        label: 'Buy %K below',
+        helper: '%K must be under this the day before the stoch cross (20).',
+        min: 0
+      },
+      {
+        key: 'sellStochThreshold',
+        label: 'Sell %K above',
+        helper: '%K must be over this the day before the stoch cross (80).',
+        min: 0
+      },
+      {
+        key: 'macdLookaheadDays',
+        label: 'MACD lookahead',
+        helper: 'Days after the stoch cross to find the MACD cross (5).',
+        min: 0
+      }
+    ]
+  },
+  {
+    title: 'Grade thresholds (RSI on the cross day)',
+    fields: [
+      {
+        key: 'rsiAPlusBuy',
+        label: 'Buy A+ ≤',
+        helper: 'Buy graded A+ when RSI ≤ this (30).',
+        min: 0
+      },
+      { key: 'rsiABuy', label: 'Buy A ≤', helper: 'Else A when RSI ≤ this (40).', min: 0 },
+      {
+        key: 'rsiBBuy',
+        label: 'Buy B ≤',
+        helper: 'Else B when RSI ≤ this (50); otherwise C.',
+        min: 0
+      },
+      {
+        key: 'rsiAPlusSell',
+        label: 'Sell A+ ≥',
+        helper: 'Sell graded A+ when RSI ≥ this (70).',
+        min: 0
+      },
+      { key: 'rsiASell', label: 'Sell A ≥', helper: 'Else A when RSI ≥ this (60).', min: 0 },
+      {
+        key: 'rsiBSell',
+        label: 'Sell B ≥',
+        helper: 'Else B when RSI ≥ this (50); otherwise C.',
+        min: 0
+      }
+    ]
   }
 ]
 
@@ -102,14 +167,16 @@ function NumberField({
   value,
   was,
   dirty,
+  min = 1,
   onChange
 }: {
   value: number
   was: number
   dirty: boolean
+  min?: number
   onChange: (n: number) => void
 }): ReactElement {
-  const bump = (delta: number): void => onChange(Math.max(1, value + delta))
+  const bump = (delta: number): void => onChange(Math.max(min, value + delta))
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
@@ -119,7 +186,7 @@ function NumberField({
           value={String(value)}
           onChange={(e) => {
             const n = Number(e.target.value.replace(/\D/g, ''))
-            onChange(Number.isFinite(n) && n > 0 ? n : 1)
+            onChange(Number.isFinite(n) ? Math.max(min, n) : min)
           }}
           style={{
             ...inputBase,
@@ -159,13 +226,13 @@ export function SettingsPanel({ initial, onSaved, onClose }: Props): ReactElemen
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const setField = (key: PeriodKey, value: number): void => {
+  const setField = (key: NumericKey, value: number): void => {
     setEdited((prev) => ({ ...prev, [key]: value }))
     setError(null)
   }
 
-  const periodKeys = SECTIONS.flatMap((s) => s.fields.map((f) => f.key))
-  const dirtyCount = periodKeys.filter((k) => edited[k] !== saved[k]).length
+  const editableKeys = SECTIONS.flatMap((s) => s.fields.map((f) => f.key))
+  const dirtyCount = editableKeys.filter((k) => edited[k] !== saved[k]).length
 
   const handleSave = async (): Promise<void> => {
     if (dirtyCount === 0 || saving) return
@@ -257,6 +324,7 @@ export function SettingsPanel({ initial, onSaved, onClose }: Props): ReactElemen
                         value={edited[f.key]}
                         was={saved[f.key]}
                         dirty={edited[f.key] !== saved[f.key]}
+                        min={f.min ?? 1}
                         onChange={(n) => setField(f.key, n)}
                       />
                     </div>

@@ -2,7 +2,7 @@
 // mysql2 quirks (tasks/lessons.md): DATE → JS Date, DECIMAL → string. Adapters
 // normalise at the row boundary.
 
-import type { IndicatorPeriods } from './indicators'
+import type { IndicatorPeriods, SignalSettings } from './indicators'
 
 // The single persisted strategy record (app_ta_settings row 1). Stage 1 only
 // edits the indicator periods; the signal/grade/window fields are seeded for
@@ -45,6 +45,21 @@ export function toPeriods(s: TaSettings): IndicatorPeriods {
     stochKSmooth: s.stochKSmooth,
     stochDSmooth: s.stochDSmooth,
     rsiPeriod: s.rsiPeriod
+  }
+}
+
+// Pull just the signal-detection rules + grade thresholds (what detectSignals needs).
+export function toSignalSettings(s: TaSettings): SignalSettings {
+  return {
+    buyStochThreshold: s.buyStochThreshold,
+    sellStochThreshold: s.sellStochThreshold,
+    macdLookaheadDays: s.macdLookaheadDays,
+    rsiAPlusBuy: s.rsiAPlusBuy,
+    rsiABuy: s.rsiABuy,
+    rsiBBuy: s.rsiBBuy,
+    rsiAPlusSell: s.rsiAPlusSell,
+    rsiASell: s.rsiASell,
+    rsiBSell: s.rsiBSell
   }
 }
 

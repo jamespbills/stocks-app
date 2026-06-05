@@ -1,7 +1,7 @@
 import { useState, type ReactElement, type ReactNode } from 'react'
 import { Settings as SettingsIcon } from 'lucide-react'
 import { useRouter } from '../../hooks/use-router'
-import { toPeriods, type TaSettings } from './types'
+import { toPeriods, toSignalSettings, type TaSettings } from './types'
 import { useTickerList } from './adapters/tickers'
 import { useChartData } from './adapters/series'
 import { useTaSettings, DEFAULT_TA_SETTINGS } from './settings/useTaSettings'
@@ -42,6 +42,7 @@ export default function TACharts(): ReactElement {
   // Live settings (saved this session) win; else the persisted row; else defaults.
   const settings = liveSettings ?? settingsQuery.data ?? DEFAULT_TA_SETTINGS
   const periods = toPeriods(settings)
+  const signalSettings = toSignalSettings(settings)
 
   const chart = useChartData(effectiveTicker)
 
@@ -124,7 +125,12 @@ export default function TACharts(): ReactElement {
           ) : chart.data.bars.length === 0 ? (
             <ChartEmpty ticker={effectiveTicker} onOpenArchive={() => navigate('price-archive')} />
           ) : (
-            <ChartShell bars={chart.data.bars} reports={chart.data.reports} periods={periods} />
+            <ChartShell
+              bars={chart.data.bars}
+              reports={chart.data.reports}
+              periods={periods}
+              signalSettings={signalSettings}
+            />
           )}
         </div>
 

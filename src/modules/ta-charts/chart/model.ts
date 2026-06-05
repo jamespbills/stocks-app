@@ -3,7 +3,7 @@
 // ChartStack (they need the live geometry); everything here depends only on data.
 
 import type { PriceBar } from '../../price-archive/types'
-import type { Num } from '../indicators'
+import type { Num, Signal } from '../indicators'
 import type { ReportMarker } from '../types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -138,4 +138,43 @@ export function reportAnchors(reports: ReportMarker[], dates: string[]): ReportA
     anchors.push({ report, idx: lo })
   }
   return anchors
+}
+
+// A signal positioned on the price panel: x and the y of its price point.
+// Computed once in ChartShell and shared with the hit-areas so the drawn marker
+// and its hover target stay aligned.
+export interface MarkerAnchor {
+  signal: Signal
+  x: number
+  y: number // y of the close price at the signal bar
+}
+
+// Triangle offset from the price point (buy below, sell above) + hit-area size.
+export const MARKER = { dy: 15, half: 5.5, height: 9.5, hit: 18 }
+
+export interface NearestReport {
+  report: ReportMarker
+  days: number // signed entry − report: negative = signal is before the report
+}
+
+// The report closest (by absolute day delta) to a given signal date. Used in the
+// signal hover modal's "days to nearest report" field. Negative = before.
+export function nearestReport(
+  signalDateIso: string,
+  reports: ReportMarker[]
+): NearestReport | null {
+  if (!signalDateIso) return null
+  const t = parseIso(signalDateIso).getTime()
+  let best: NearestReport | null = null
+  let bestAbs = Infinity
+  for (const r of reports) {
+    if (!r.dateReleased) continue
+    const days = Math.round((t - parseIso(r.dateReleased).getTime()) / 86_400_000)
+    const abs = Math.abs(days)
+    if (abs < bestAbs) {
+      bestAbs = abs
+      best = { report: r, days }
+    }
+  }
+  return best
 }

@@ -1,7 +1,13 @@
 import { memo, type ReactElement } from 'react'
 import type { IndicatorPeriods, IndicatorSeries, Num } from '../indicators'
 import { xForIndex, yForValue, type ChartGeometry } from './geometry'
-import type { AxisTick, ChartArrays, ReportAnchor } from './model'
+import {
+  MARKER,
+  type AxisTick,
+  type ChartArrays,
+  type MarkerAnchor,
+  type ReportAnchor
+} from './model'
 
 // The static four-panel chart. Deliberately independent of hover state so it
 // renders once per ticker/period/size change — the crosshair + tooltip live in
@@ -21,6 +27,7 @@ interface Props {
   ranges: ChartRanges
   ticks: AxisTick[]
   reports: ReportAnchor[]
+  markers: MarkerAnchor[]
   periods: IndicatorPeriods
 }
 
@@ -31,6 +38,7 @@ function ChartStackBase({
   ranges,
   ticks,
   reports,
+  markers,
   periods
 }: Props): ReactElement {
   const { panelY, panelH, plotL, plotR, plotW, n } = geom
@@ -183,6 +191,33 @@ function ChartStackBase({
         name="PRICE"
         sub={`SMA(${periods.smaWindow}) dashed · close`}
       />
+
+      {/* Signal markers — buy ▲ below the price point, sell ▼ above (Stage 2). */}
+      {markers.map((m, k) => {
+        const cx = m.x
+        if (m.signal.type === 'buy') {
+          const cy = m.y + MARKER.dy
+          return (
+            <polygon
+              key={k}
+              points={`${cx - MARKER.half},${cy} ${cx + MARKER.half},${cy} ${cx},${cy - MARKER.height}`}
+              fill="var(--color-up)"
+              stroke="rgba(255,255,255,0.85)"
+              strokeWidth="0.6"
+            />
+          )
+        }
+        const cy = m.y - MARKER.dy
+        return (
+          <polygon
+            key={k}
+            points={`${cx - MARKER.half},${cy} ${cx + MARKER.half},${cy} ${cx},${cy + MARKER.height}`}
+            fill="var(--color-down)"
+            stroke="rgba(255,255,255,0.85)"
+            strokeWidth="0.6"
+          />
+        )
+      })}
 
       {/* ════ VOLUME ════ */}
       {arrays.volume.map((v, i) => {
