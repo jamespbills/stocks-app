@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { MutedLabel } from '../../components/MutedLabel'
 import { formatDate } from '../../lib/format'
 import { EntryPopover } from './EntryPopover'
+import { usePlayThresholds } from '../../lib/playThresholds'
 import type { CalendarEntry, PopoverState } from './types'
 
 interface UpcomingPanelProps {
@@ -15,18 +16,6 @@ interface UpcomingPanelProps {
 
 function formatShortDate(dateStr: string): string {
   return formatDate(dateStr, 'short', '?')
-}
-
-function playColor(score: number | null): string {
-  if (score === 13) return 'var(--color-play-13-text)'
-  if (score === 12) return 'var(--color-play-12-text)'
-  return 'rgba(255,255,255,0.22)'
-}
-
-function play2Color(score: number | null): string {
-  if (score === 14) return 'var(--color-play-13-text)'
-  if (score === 13) return 'var(--color-play-12-text)'
-  return 'rgba(255,255,255,0.22)'
 }
 
 function SectionLabel({ children, color }: { children: string; color?: string }): ReactElement {
@@ -57,6 +46,19 @@ function UpcomingRow({
   onDisregard
 }: UpcomingRowProps): ReactElement {
   const [rowEl, setRowEl] = useState<HTMLDivElement | null>(null)
+  const thresholds = usePlayThresholds()
+
+  function playColor(score: number | null): string {
+    if (score === thresholds.play.maxScore) return 'var(--color-play-13-text)'
+    if (score === thresholds.play.nearMiss) return 'var(--color-play-12-text)'
+    return 'rgba(255,255,255,0.22)'
+  }
+
+  function play2Color(score: number | null): string {
+    if (score === thresholds.play_2.maxScore) return 'var(--color-play-13-text)'
+    if (score === thresholds.play_2.nearMiss) return 'var(--color-play-12-text)'
+    return 'rgba(255,255,255,0.22)'
+  }
 
   let dateColor = 'var(--color-text-muted)'
   if (entry.status === 'overdue') dateColor = 'var(--color-danger)'
@@ -88,7 +90,7 @@ function UpcomingRow({
         borderLeft: active
           ? '2px solid var(--color-border-focus)'
           : highlight
-            ? '2px solid var(--color-border-focus)'
+            ? '2px solid var(--color-up)'
             : '2px solid transparent'
       }}
     >
@@ -188,9 +190,7 @@ export function UpcomingPanel({
   onNavigate,
   onDisregardEntry
 }: UpcomingPanelProps): ReactElement {
-  const missed = entries
-    .filter((e) => e.days_to_go < 0)
-    .sort((a, b) => a.days_to_go - b.days_to_go)
+  const missed = entries.filter((e) => e.days_to_go < 0).sort((a, b) => a.days_to_go - b.days_to_go)
 
   const today = entries.filter((e) => e.days_to_go === 0)
 
@@ -265,7 +265,7 @@ export function UpcomingPanel({
         )}
         {today.length > 0 && (
           <>
-            <SectionLabel color="var(--color-warning)">TODAY</SectionLabel>
+            <SectionLabel color="var(--color-up)">TODAY</SectionLabel>
             {today.map((e) => (
               <UpcomingRow
                 key={e.ticker}

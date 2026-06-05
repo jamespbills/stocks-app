@@ -441,7 +441,7 @@ export default function ReportCalendar(): ReactElement {
       </div>
 
       {/* Body: grid + optional upcoming panel */}
-      <div className="flex flex-1 min-h-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <CalendarGrid
           year={nav.year}
           month={nav.month}
