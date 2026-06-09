@@ -7,6 +7,7 @@ import { saveTaSettings } from './useTaSettings'
 // (pure-TS recompute) once saved — the calibration loop in miniature.
 type NumericKey =
   | 'smaWindow'
+  | 'maWeeklyWindow'
   | 'macdFast'
   | 'macdSlow'
   | 'macdSignal'
@@ -41,6 +42,12 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
         key: 'smaWindow',
         label: 'SMA window',
         helper: 'Bars in the dashed price MA (200 = legacy default).'
+      },
+      {
+        key: 'maWeeklyWindow',
+        label: 'Weekly MA window',
+        helper:
+          'Weeks in the dotted weekly-close MA overlay (200 ≈ 4 years). Raising it needs an archive rebuild to extend the weekly warm-up.'
       }
     ]
   },

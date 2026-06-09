@@ -149,8 +149,10 @@ export default function TACharts(): ReactElement {
               <ChartShell
                 bars={chart.data.bars}
                 reports={chart.data.reports}
+                weekly={chart.data.weekly}
                 periods={periods}
                 signalSettings={signalSettings}
+                maWeeklyWindow={settings.maWeeklyWindow}
               />
             )}
           </div>

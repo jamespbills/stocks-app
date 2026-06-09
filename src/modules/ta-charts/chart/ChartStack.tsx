@@ -24,22 +24,26 @@ interface Props {
   geom: ChartGeometry
   arrays: ChartArrays
   indicators: IndicatorSeries
+  weeklyMa: Num[] // daily-aligned weekly-MA overlay (all-null = no line drawn)
   ranges: ChartRanges
   ticks: AxisTick[]
   reports: ReportAnchor[]
   markers: MarkerAnchor[]
   periods: IndicatorPeriods
+  maWeeklyWindow: number
 }
 
 function ChartStackBase({
   geom,
   arrays,
   indicators,
+  weeklyMa,
   ranges,
   ticks,
   reports,
   markers,
-  periods
+  periods,
+  maWeeklyWindow
 }: Props): ReactElement {
   const { panelY, panelH, plotL, plotR, plotW, n } = geom
   const xFor = (i: number): number => xForIndex(geom, i)
@@ -96,6 +100,10 @@ function ChartStackBase({
     firstRsi >= 0 && rsiLineD
       ? `${rsiLineD} L ${xFor(n - 1).toFixed(1)} ${rsiFillBottom.toFixed(1)} L ${xFor(firstRsi).toFixed(1)} ${rsiFillBottom.toFixed(1)} Z`
       : ''
+
+  // Weekly-MA overlay only draws (and only earns its legend slot) when the
+  // ticker actually has warmed-up weekly data.
+  const hasWeekly = weeklyMa.some((v) => v !== null)
 
   const priceLo = ranges.price.lo
   const priceHi = ranges.price.hi
@@ -162,6 +170,15 @@ function ChartStackBase({
         strokeWidth="1.2"
         strokeDasharray="4 4"
       />
+      {hasWeekly && (
+        <path
+          d={polyD(weeklyMa, panelY.price, panelH.price, priceLo, priceHi, 14, 8)}
+          fill="none"
+          stroke="var(--color-chart-sma-weekly)"
+          strokeWidth="1.2"
+          strokeDasharray="1.5 3"
+        />
+      )}
       <path
         d={polyD(arrays.close, panelY.price, panelH.price, priceLo, priceHi, 14, 8)}
         fill="none"
@@ -189,7 +206,11 @@ function ChartStackBase({
         x={plotL}
         y={panelY.price + 10}
         name="PRICE"
-        sub={`SMA(${periods.smaWindow}) dashed · close`}
+        sub={
+          hasWeekly
+            ? `SMA(${periods.smaWindow}) dashed · MA-W(${maWeeklyWindow}) dotted · close`
+            : `SMA(${periods.smaWindow}) dashed · close`
+        }
       />
 
       {/* Signal markers — buy ▲ below the price point, sell ▼ above (Stage 2). */}

@@ -3,8 +3,8 @@
 // Archive is the single owner of how prices are read out of the store.
 
 import { formatDate } from '../../../lib/format'
-import { PRICE_SERIES_SQL, priceSeriesBatchSql } from '../queries'
-import type { PriceBar } from '../types'
+import { PRICE_SERIES_SQL, WEEKLY_SERIES_SQL, priceSeriesBatchSql } from '../queries'
+import type { PriceBar, WeeklyBar } from '../types'
 
 interface RawPriceRow {
   trade_date: Date | string | null
@@ -53,6 +53,27 @@ function toBar(r: RawPriceRow): PriceBar {
     adjClose: num(r.adj_close_price),
     volume: num(r.volume)
   }
+}
+
+interface RawWeeklyRow {
+  week_date: Date | string | null
+  close_price: string | number | null
+}
+
+/**
+ * Fetch the archived weekly closes for a ticker (the whole stored series — it
+ * already spans only the coverage window + weekly-MA warm-up lead). Feeds the
+ * TA chart's weekly-MA overlay; rows whose close fails to parse are dropped.
+ */
+export async function fetchWeeklySeries(ticker: string): Promise<WeeklyBar[]> {
+  const rows = (await window.electronAPI.db.query(WEEKLY_SERIES_SQL, [ticker])) as RawWeeklyRow[]
+  const out: WeeklyBar[] = []
+  for (const r of rows) {
+    const close = num(r.close_price)
+    if (close === null) continue
+    out.push({ weekDate: formatDate(r.week_date, 'iso', ''), close })
+  }
+  return out
 }
 
 /**

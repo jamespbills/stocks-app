@@ -33,15 +33,20 @@ export function toArrays(bars: PriceBar[]): ChartArrays {
   }
 }
 
-// Price panel range — spans close and the (visible part of the) SMA, padded.
-export function priceRange(close: number[], sma: Num[]): { lo: number; hi: number } {
+// Price panel range — spans close, the (visible part of the) SMA, and the
+// weekly-MA overlay when present, padded.
+export function priceRange(
+  close: number[],
+  sma: Num[],
+  weeklyMa: Num[] = []
+): { lo: number; hi: number } {
   let lo = Infinity
   let hi = -Infinity
   for (const v of close) {
     if (v < lo) lo = v
     if (v > hi) hi = v
   }
-  for (const v of sma) {
+  for (const v of [...sma, ...weeklyMa]) {
     if (v === null) continue
     if (v < lo) lo = v
     if (v > hi) hi = v

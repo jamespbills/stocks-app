@@ -2,7 +2,7 @@
 // Note the mysql2 runtime quirks (tasks/lessons.md): DATE columns arrive as JS
 // Date objects, DECIMAL columns as strings. Adapters normalise at the row boundary.
 
-export type PriceSource = 'yfinance' | 'manual_investingcom' | 'manual_csv'
+export type PriceSource = 'yfinance' | 'manual_investingcom' | 'manual_csv' | 'yfinance_weekly'
 export type CoverageStatus = 'fresh' | 'stale' | 'partial' | 'missing'
 export type TrackedSource = 'manual_watch' | 'isa_holding'
 export type ClaimSource = 'play_universe' | TrackedSource
@@ -107,6 +107,13 @@ export interface PriceBar {
   close: number
   adjClose: number | null
   volume: number | null
+}
+
+// One weekly close bar (fact_weekly_prices) — feeds the TA weekly-MA overlay.
+// weekDate is the yfinance week-start label (Monday).
+export interface WeeklyBar {
+  weekDate: string
+  close: number
 }
 
 // Streaming events emitted by archive_prices.py (line-delimited JSON on stdout).

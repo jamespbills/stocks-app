@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { formatDate } from '../../../lib/format'
 import {
   computeIndicators,
+  computeWeeklyOverlay,
   detectSignals,
   type IndicatorPeriods,
   type SignalSettings
 } from '../indicators'
-import type { PriceBar } from '../../price-archive/types'
+import type { PriceBar, WeeklyBar } from '../../price-archive/types'
 import type { ReportMarker } from '../types'
 import { buildGeometry, indexForX, xForIndex, yForValue } from './geometry'
 import {
@@ -28,11 +29,20 @@ import { SignalTooltip } from './SignalTooltip'
 interface Props {
   bars: PriceBar[]
   reports: ReportMarker[]
+  weekly: WeeklyBar[] // empty = no overlay (ticker not yet weekly-archived)
   periods: IndicatorPeriods
   signalSettings: SignalSettings
+  maWeeklyWindow: number
 }
 
-export function ChartShell({ bars, reports, periods, signalSettings }: Props): ReactElement {
+export function ChartShell({
+  bars,
+  reports,
+  weekly,
+  periods,
+  signalSettings,
+  maWeeklyWindow
+}: Props): ReactElement {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
@@ -52,13 +62,18 @@ export function ChartShell({ bars, reports, periods, signalSettings }: Props): R
   const arrays = useMemo(() => toArrays(bars), [bars])
   // Indicators recompute when periods change — the instant calibration loop.
   const indicators = useMemo(() => computeIndicators(bars, periods), [bars, periods])
+  // Weekly-MA overlay (display-only) — same calibration loop, separate compute.
+  const weeklyOverlay = useMemo(
+    () => computeWeeklyOverlay(weekly, arrays.dates, arrays.close, maWeeklyWindow),
+    [weekly, arrays, maWeeklyWindow]
+  )
   const ranges: ChartRanges = useMemo(
     () => ({
-      price: priceRange(arrays.close, indicators.sma),
+      price: priceRange(arrays.close, indicators.sma, weeklyOverlay.ma),
       macdAbs: macdAbs(indicators.macd, indicators.macdSignal),
       volMax: volMax(arrays.volume)
     }),
-    [arrays, indicators]
+    [arrays, indicators, weeklyOverlay]
   )
   const ticks = useMemo(() => axisTicks(arrays.dates), [arrays.dates])
   const anchors = useMemo(() => reportAnchors(reports, arrays.dates), [reports, arrays.dates])
@@ -119,11 +134,13 @@ export function ChartShell({ bars, reports, periods, signalSettings }: Props): R
               geom={geom}
               arrays={arrays}
               indicators={indicators}
+              weeklyMa={weeklyOverlay.ma}
               ranges={ranges}
               ticks={ticks}
               reports={anchors}
               markers={markers}
               periods={periods}
+              maWeeklyWindow={maWeeklyWindow}
             />
 
             {/* Report hover handles — small markers in the top strip, aligned to
@@ -199,6 +216,8 @@ export function ChartShell({ bars, reports, periods, signalSettings }: Props): R
                   hoverIndex={hoverIndex}
                   arrays={arrays}
                   indicators={indicators}
+                  weeklyMa={weeklyOverlay.ma}
+                  weeklyPos={weeklyOverlay.position}
                 />
               </>
             )}

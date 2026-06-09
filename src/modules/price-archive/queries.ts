@@ -69,6 +69,16 @@ export function priceSeriesBatchSql(tickerCount: number): string {
   `
 }
 
+// Weekly closes for a ticker — the full archived weekly series (it already spans
+// only the coverage window + MA warm-up lead, so no date filter). Feeds the TA
+// chart's weekly-MA overlay via adapters/prices.ts. Param: [ticker].
+export const WEEKLY_SERIES_SQL = `
+  SELECT week_date, close_price
+  FROM fact_weekly_prices
+  WHERE ticker = ?
+  ORDER BY week_date
+`
+
 // 5.6 Settings (read).
 export const SETTINGS_SQL = `SELECT * FROM app_archive_settings WHERE id = 1`
 

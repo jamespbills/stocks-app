@@ -10,6 +10,9 @@ import type { Grade, IndicatorPeriods, MaPosition, SignalSettings } from './indi
 export interface TaSettings {
   // Indicator periods (Stage 1)
   smaWindow: number
+  // Weekly-MA overlay window in WEEKS (display-only — deliberately NOT part of
+  // IndicatorPeriods, so it cannot touch signals or the backtest)
+  maWeeklyWindow: number
   macdFast: number
   macdSlow: number
   macdSignal: number

@@ -27,10 +27,12 @@ interface RawTaSettingsRow {
   chart_window_days_after: number | string
   exit_mode: string
   buy_entry_window_days: number | string
+  ma_weekly_window: number | string
 }
 
 export const DEFAULT_TA_SETTINGS: TaSettings = {
   smaWindow: 200,
+  maWeeklyWindow: 200,
   macdFast: 12,
   macdSlow: 26,
   macdSignal: 9,
@@ -56,6 +58,7 @@ export const DEFAULT_TA_SETTINGS: TaSettings = {
 function toSettings(r: RawTaSettingsRow): TaSettings {
   return {
     smaWindow: Number(r.sma_window),
+    maWeeklyWindow: Number(r.ma_weekly_window),
     macdFast: Number(r.macd_fast),
     macdSlow: Number(r.macd_slow),
     macdSignal: Number(r.macd_signal),
@@ -120,6 +123,7 @@ export async function saveTaSettings(s: TaSettings): Promise<void> {
     s.chartWindowDaysBefore,
     s.chartWindowDaysAfter,
     s.exitMode,
-    s.buyEntryWindowDays
+    s.buyEntryWindowDays,
+    s.maWeeklyWindow
   ])
 }

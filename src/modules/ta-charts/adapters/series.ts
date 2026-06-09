@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { fetchPriceSeries } from '../../price-archive/adapters/prices'
+import { fetchPriceSeries, fetchWeeklySeries } from '../../price-archive/adapters/prices'
 import { usePlayThresholds } from '../../../lib/playThresholds'
-import type { PriceBar } from '../../price-archive/types'
+import type { PriceBar, WeeklyBar } from '../../price-archive/types'
 import { fetchReports } from './reports'
 import type { ReportMarker } from '../types'
 
@@ -13,6 +13,7 @@ const FULL_TO = '2999-12-31'
 export interface ChartData {
   bars: PriceBar[]
   reports: ReportMarker[]
+  weekly: WeeklyBar[] // empty when the ticker has no weekly rows yet
 }
 
 export interface ChartDataQuery {
@@ -33,9 +34,15 @@ export function useChartData(ticker: string | null): ChartDataQuery {
   useEffect(() => {
     if (ticker === null) return
     let cancelled = false
-    Promise.all([fetchPriceSeries(ticker, FULL_FROM, FULL_TO), fetchReports(ticker, thresholds)])
-      .then(([bars, reports]) => {
-        if (!cancelled) setResult({ ticker, data: { bars, reports } })
+    Promise.all([
+      fetchPriceSeries(ticker, FULL_FROM, FULL_TO),
+      fetchReports(ticker, thresholds),
+      // The weekly-MA overlay is optional decoration — a failed weekly read
+      // degrades to "no overlay", never an error screen.
+      fetchWeeklySeries(ticker).catch((): WeeklyBar[] => [])
+    ])
+      .then(([bars, reports, weekly]) => {
+        if (!cancelled) setResult({ ticker, data: { bars, reports, weekly } })
       })
       .catch((err: unknown) => {
         if (!cancelled) {

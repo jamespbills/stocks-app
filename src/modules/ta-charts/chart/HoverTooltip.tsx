@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactElement } from 'react'
 import { formatDate, formatPercent } from '../../../lib/format'
-import type { IndicatorSeries, Num } from '../indicators'
+import type { IndicatorSeries, MaPosition, Num } from '../indicators'
 import { xForIndex, type ChartGeometry } from './geometry'
 import type { ChartArrays } from './model'
 
@@ -12,6 +12,8 @@ interface Props {
   hoverIndex: number
   arrays: ChartArrays
   indicators: IndicatorSeries
+  weeklyMa?: Num[] // daily-aligned weekly-MA overlay; rows hidden when absent/empty
+  weeklyPos?: MaPosition[]
 }
 
 const TT_W = 200
@@ -107,7 +109,14 @@ function SectionHead({ label }: { label: string }): ReactElement {
   )
 }
 
-export function HoverTooltip({ geom, hoverIndex, arrays, indicators }: Props): ReactElement {
+export function HoverTooltip({
+  geom,
+  hoverIndex,
+  arrays,
+  indicators,
+  weeklyMa,
+  weeklyPos
+}: Props): ReactElement {
   const i = hoverIndex
   const px = xForIndex(geom, i)
   const margin = 14
@@ -123,6 +132,13 @@ export function HoverTooltip({ geom, hoverIndex, arrays, indicators }: Props): R
   const maPos = indicators.maPosition[i]
   const maColor =
     maPos === 'ABOVE' ? 'var(--color-up)' : maPos === 'BELOW' ? 'var(--color-down)' : undefined
+  // Weekly-MA rows only when the ticker has any weekly overlay data at all —
+  // a never-archived ticker's tooltip is byte-identical to before.
+  const hasWeekly = weeklyMa !== undefined && weeklyMa.some((v) => v !== null)
+  const wMa = hasWeekly ? weeklyMa[i] : null
+  const wPos = hasWeekly && weeklyPos ? weeklyPos[i] : null
+  const wColor =
+    wPos === 'ABOVE' ? 'var(--color-up)' : wPos === 'BELOW' ? 'var(--color-down)' : undefined
   const hist = indicators.macdHist[i]
 
   const box: CSSProperties = {
@@ -157,6 +173,12 @@ export function HoverTooltip({ geom, hoverIndex, arrays, indicators }: Props): R
       <Row k="Chg" v={formatPercent(chg, { signed: true, digits: 2 })} c={chgColor} />
       <Row k="SMA" v={fmt(sma)} swatch="var(--color-chart-sma)" />
       <Row k="MA pos" v={maPos ?? '—'} c={maColor} />
+      {hasWeekly && (
+        <>
+          <Row k="MA-W" v={fmt(wMa)} swatch="var(--color-chart-sma-weekly)" />
+          <Row k="MA-W pos" v={wPos ?? '—'} c={wColor} />
+        </>
+      )}
 
       <SectionHead label="Volume" />
       <Row k="Vol" v={fmtVolume(arrays.volume[i])} />

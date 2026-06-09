@@ -341,3 +341,59 @@ export function detectSignals(
   const byIndex = (a: Signal, b: Signal): number => a.index - b.index
   return [...[...buys.values()].sort(byIndex), ...[...sells.values()].sort(byIndex)]
 }
+
+// ── Weekly MA overlay (display-only) ────────────────────────────────────────
+// The 200-week MA the professional way: a rolling SMA over WEEKLY closes (the
+// close of each week's last trading day — what Yahoo/TradingView average), then
+// forward-filled onto the daily x-axis as a step function. Weekly closes come
+// from fact_weekly_prices (yfinance interval='1wk', week-start Monday labels).
+// Deliberately separate from computeIndicators/IndicatorPeriods — this overlay
+// feeds NO signals, trades, or backtest numbers.
+
+// One weekly close — structurally satisfied by price-archive's WeeklyBar.
+export interface WeeklyClose {
+  weekDate: string // ISO, the week-start (Monday) label
+  close: number
+}
+
+export interface WeeklyOverlay {
+  ma: Num[] // weekly SMA mapped onto the daily axis (null while warming up)
+  position: MaPosition[] // daily close vs the weekly MA
+}
+
+/**
+ * Compute the weekly-close SMA and map it onto the daily axis.
+ *
+ * Each daily bar takes the MA of the weekly bar containing it (week_date ≤ day,
+ * i.e. the running week — matching how Yahoo/TradingView render a weekly MA on
+ * a daily chart), carried forward past the last weekly bar. ISO string
+ * comparison is chronologically safe. Empty weekly input → all nulls.
+ */
+export function computeWeeklyOverlay(
+  weekly: WeeklyClose[],
+  dailyDates: string[],
+  dailyCloses: number[],
+  window: number
+): WeeklyOverlay {
+  const n = dailyDates.length
+  const ma: Num[] = new Array(n).fill(null)
+  const position: MaPosition[] = new Array(n).fill(null)
+  if (weekly.length === 0 || n === 0) return { ma, position }
+
+  const weeklyMa = sma(
+    weekly.map((w) => w.close),
+    window
+  )
+
+  // Two-pointer forward-fill: advance the weekly index while the NEXT weekly
+  // bar still starts on/before the daily date.
+  let p = -1
+  for (let i = 0; i < n; i++) {
+    while (p + 1 < weekly.length && weekly[p + 1].weekDate <= dailyDates[i]) p++
+    if (p < 0) continue // daily bar before the first weekly bar
+    const m = weeklyMa[p]
+    ma[i] = m
+    if (m !== null) position[i] = dailyCloses[i] > m ? 'ABOVE' : 'BELOW'
+  }
+  return { ma, position }
+}

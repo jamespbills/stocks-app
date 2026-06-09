@@ -19,6 +19,15 @@ Design rules (see docs/decisions/price-archive-implementation.md §6):
   * Manual wins — rows whose existing source is manual_* are never overwritten by
     a yfinance fetch unless --force.
   * A batch never aborts on one ticker; failures are logged and the run continues.
+
+Weekly pass (200-week MA overlay): after each ticker's daily fetch, weekly closes
+(interval='1wk') are upserted into fact_weekly_prices over the coverage window
+plus an ma_weekly_window + 8 week lead (read from app_ta_settings), so the weekly
+SMA is warm from the first daily bar. Always full-window — ~300 rows is trivial,
+re-upserting refreshes the in-progress week's bar for free, and there is no manual
+protection (the table is yfinance-only). Each weekly fetch logs its own
+dim_price_runs row (source='yfinance_weekly'); a weekly failure never affects the
+daily run's status, and the Build panel's progress counters stay daily-only.
 """
 
 import argparse
@@ -55,6 +64,18 @@ ON DUPLICATE KEY UPDATE
     source          = VALUES(source),
     source_run_id   = VALUES(source_run_id)
 """
+
+WEEKLY_UPSERT_SQL = """
+INSERT INTO fact_weekly_prices (ticker, week_date, close_price, source, source_run_id)
+VALUES (%s, %s, %s, 'yfinance', %s)
+ON DUPLICATE KEY UPDATE
+    close_price   = VALUES(close_price),
+    source_run_id = VALUES(source_run_id)
+"""
+
+# Extra weekly bars fetched beyond the MA window so the first in-window value
+# never sits on a partial/missing first bar.
+WEEKLY_LEAD_BUFFER_WEEKS = 8
 
 
 def emit(obj: dict) -> None:
@@ -143,6 +164,26 @@ def missing_segments(target_from, target_to, have_lo, have_hi, force):
     return segments
 
 
+def read_ma_weekly_window(cursor) -> int:
+    """Weekly-MA window (weeks) from app_ta_settings — drives the weekly fetch lead."""
+    cursor.execute("SELECT ma_weekly_window FROM app_ta_settings WHERE id = 1")
+    row = cursor.fetchone()
+    if row is None or row.get("ma_weekly_window") is None:
+        return 200
+    return int(row["ma_weekly_window"])
+
+
+def weekly_window(target_from: date, target_to: date, ma_weeks: int) -> "tuple[date, date]":
+    """The weekly fetch window: the daily coverage window plus the MA warm-up lead.
+
+    Start is Monday-aligned to match yfinance's week-start labels, so the first
+    bar is a complete week rather than a partial one.
+    """
+    start = target_from - timedelta(weeks=ma_weeks + WEEKLY_LEAD_BUFFER_WEEKS)
+    start -= timedelta(days=start.weekday())
+    return start, target_to
+
+
 # ── Fetch + upsert ──────────────────────────────────────────────────────────
 
 
@@ -174,6 +215,32 @@ def fetch_segment(ticker, seg_from, seg_to):
             _num(adj),
             _vol(row.get("Volume")),
         ))
+    return out
+
+
+def fetch_weekly(ticker, w_from, w_to):
+    """yfinance weekly closes for one window. Returns [(ticker, week_date, close)].
+
+    Weekly bars are labelled by week start (Monday); the bar for the current
+    in-progress week updates intraweek and is simply refreshed by the next run's
+    upsert. Raw Close (auto_adjust=False) for parity with the daily store.
+    """
+    df = yf.Ticker(ticker).history(
+        start=w_from.isoformat(),
+        end=(w_to + timedelta(days=1)).isoformat(),  # yfinance end is exclusive
+        interval="1wk",
+        auto_adjust=False,
+        actions=False,
+    )
+    out = []
+    if df is None or df.empty:
+        return out
+    for idx, row in df.iterrows():
+        week_date = idx.date() if hasattr(idx, "date") else to_date(idx)
+        close = row.get("Close")
+        if close is None or close != close:          # NaN guard — close is NOT NULL
+            continue
+        out.append((ticker, week_date, _num(close)))
     return out
 
 
@@ -251,6 +318,39 @@ def process_ticker(conn, cursor, item, force, triggered_by):
     return status
 
 
+def process_ticker_weekly(conn, cursor, item, ma_weeks, triggered_by):
+    """Weekly-close pass for one ticker. Returns its terminal status string.
+
+    Simpler than the daily pass on purpose: always the full window (no segment
+    resume — ~300 rows), no manual protection (fact_weekly_prices is
+    yfinance-only). Logs its own dim_price_runs row so a weekly failure never
+    touches the daily run's status.
+    """
+    ticker = item["ticker"]
+    w_from, w_to = weekly_window(item["target_from"], item["target_to"], ma_weeks)
+    run_id = open_run(conn, cursor, ticker, "yfinance_weekly", w_from, w_to, triggered_by)
+
+    inserted = updated = 0
+    try:
+        for r in fetch_weekly(ticker, w_from, w_to):
+            cursor.execute(WEEKLY_UPSERT_SQL, r + (run_id,))
+            if cursor.rowcount == 1:
+                inserted += 1
+            elif cursor.rowcount == 2:
+                updated += 1
+        conn.commit()
+    except Exception as exc:                          # network / API — never abort the batch
+        conn.rollback()
+        close_run(conn, cursor, run_id, inserted, updated, "failed", str(exc)[:1000])
+        emit({"type": "stderr", "message": f"{ticker} (weekly): {exc}"})
+        return "failed"
+
+    bars = inserted + updated
+    status = "ok" if bars > 0 else "no_data"
+    close_run(conn, cursor, run_id, inserted, updated, status)
+    return status
+
+
 # ── Entry point ───────────────────────────────────────────────────────────
 
 
@@ -277,8 +377,10 @@ def main() -> None:
         work = resolve_work_list(cursor, args)
         total = len(work)
         log(f"Resolved {total} ticker(s) from coverage target.")
+        ma_weeks = read_ma_weekly_window(cursor)
 
         counts = {"ok": 0, "no_data": 0, "failed": 0}
+        weekly_counts = {"ok": 0, "no_data": 0, "failed": 0}
         failed = []
         for i, item in enumerate(work, start=1):
             emit({"type": "progress", "current": i, "total": total, "ticker": item["ticker"]})
@@ -286,6 +388,13 @@ def main() -> None:
             counts[status] = counts.get(status, 0) + 1
             if status == "failed":
                 failed.append(item["ticker"])
+            w_status = process_ticker_weekly(conn, cursor, item, ma_weeks, args.triggered_by)
+            weekly_counts[w_status] = weekly_counts.get(w_status, 0) + 1
+
+        log(
+            f"Weekly bars: {weekly_counts['ok']} ok, "
+            f"{weekly_counts['no_data']} no_data, {weekly_counts['failed']} failed."
+        )
 
         emit({"type": "final", "payload": {"summary": {
             "tickers": total,

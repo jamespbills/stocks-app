@@ -35,7 +35,7 @@ export const UPDATE_TA_SETTINGS_SQL = `
     rsi_a_plus_buy = ?, rsi_a_buy = ?, rsi_b_buy = ?,
     rsi_a_plus_sell = ?, rsi_a_sell = ?, rsi_b_sell = ?,
     chart_window_days_before = ?, chart_window_days_after = ?, exit_mode = ?,
-    buy_entry_window_days = ?
+    buy_entry_window_days = ?, ma_weekly_window = ?
   WHERE id = 1
 `
 
