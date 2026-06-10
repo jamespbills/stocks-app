@@ -21,6 +21,7 @@ export interface AppConfig {
   paths: {
     aiReviews: string
     databaseProject: string
+    stocksBrain: string
   }
   apiKeys: {
     finnhub: string
@@ -77,7 +78,8 @@ export function loadConfig(): AppConfig {
     },
     paths: {
       aiReviews: String(paths.aiReviews ?? ''),
-      databaseProject: String(paths.databaseProject)
+      databaseProject: String(paths.databaseProject),
+      stocksBrain: String(paths.stocksBrain ?? '')
     },
     apiKeys: {
       finnhub: String(apiKeysRaw.finnhub ?? ''),

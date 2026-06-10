@@ -48,6 +48,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     importPriceCsv: (args: { ticker: string; rows: unknown[] }) =>
       ipcRenderer.invoke('archive:importPriceCsv', args)
   },
+  reviews: {
+    rescan: () => ipcRenderer.invoke('reviews:rescan'),
+    get: (relPath: string) => ipcRenderer.invoke('reviews:get', relPath)
+  },
   win: {
     minimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
     maximize: (): Promise<void> => ipcRenderer.invoke('win:maximize'),

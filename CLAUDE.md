@@ -159,6 +159,7 @@ Full rationale and column/interaction details: `@docs/decisions/wireframe-decisi
 - *(When Claude reads `ref.current` directly in a component's render body, remind it: `react-hooks/refs-during-render` blocks this. Use a ref **callback** that updates `useState` (`<div ref={setEl} />`), or for per-key collections keep a `useRef<Map>` for assignment and sync the active element into state via `useLayoutEffect`. See `tasks/lessons.md`.)*
 - *(When Claude places a popover/tooltip with `position: absolute` inside a `DayCell`-style cell or any container with `overflow: hidden`, remind it: the popover will be silently clipped to nothing. Use `src/components/Popover.tsx` — it portals to body and positions itself viewport-aware.)*
 - *(When Claude uses a bare `window.addEventListener('click', dismiss)` for outside-click handling, remind it: React's `e.stopPropagation()` does NOT stop native bubbling to `window`. The window handler must check `popoverEl.contains(e.target)` before dismissing, or every click inside the popover will also close it.)*
+- *(When Claude writes `ALTER TABLE … ADD COLUMN IF NOT EXISTS` (or `ADD INDEX IF NOT EXISTS`) in a migration, remind it: that is MariaDB-only — MySQL 8.0 throws `ER_PARSE_ERROR`, and since the whole `.sql` runs in one `conn.query`, it aborts the entire migration run so the DB never initialises. Guard the ALTER with an `information_schema` check + a prepared statement. See `tasks/lessons.md`.)*
 
 ---
 

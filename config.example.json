@@ -8,7 +8,8 @@
   },
   "paths": {
     "aiReviews": "C:\\path\\to\\Database Project\\Reports\\AI Reviews",
-    "databaseProject": "C:\\path\\to\\Database Project"
+    "databaseProject": "C:\\path\\to\\Database Project",
+    "stocksBrain": "C:\\path\\to\\Brains\\stocks-brain"
   },
   "apiKeys": {
     "finnhub": "",

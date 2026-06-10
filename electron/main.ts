@@ -6,6 +6,7 @@ import { initDB, registerDBHandlers } from './ipc/db'
 import { registerFSHandlers } from './ipc/fs'
 import { registerScriptHandlers } from './ipc/scripts'
 import { registerArchiveHandlers } from './ipc/archive'
+import { registerReviewsHandlers } from './ipc/reviews'
 import { runMigrations } from './migrations'
 
 function createWindow(): void {
@@ -84,6 +85,7 @@ app.whenReady().then(async () => {
   registerFSHandlers()
   registerScriptHandlers()
   registerArchiveHandlers()
+  registerReviewsHandlers()
   registerWindowHandlers()
 
   createWindow()
