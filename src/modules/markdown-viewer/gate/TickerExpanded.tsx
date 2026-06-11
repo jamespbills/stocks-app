@@ -12,7 +12,7 @@ import { usePlayThresholds } from '../../../lib/playThresholds'
 import { PlayPill } from '../../watching-dashboard/PlayPill'
 import { GATE_STYLE } from '../gate-style'
 import type { GateRow, ReviewEntry } from '../types'
-import { SignItem } from './GatePanel'
+import { SignsPanel } from './SignsPanel'
 
 interface Props {
   row: GateRow
@@ -520,20 +520,7 @@ export function TickerExpanded({ row, entries, onBack, onOpenReader }: Props): R
               <MutedLabel as="div" size={10} style={{ marginBottom: 'var(--space-3)' }}>
                 signs · from the brain
               </MutedLabel>
-              <ul
-                style={{
-                  listStyle: 'none',
-                  margin: 0,
-                  padding: 0,
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  columnGap: 'var(--space-6)'
-                }}
-              >
-                {row.brain.signs.map((sign, i) => (
-                  <SignItem key={i} sign={sign} />
-                ))}
-              </ul>
+              <SignsPanel signs={row.brain.signs} columns />
             </div>
           )}
 

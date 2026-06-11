@@ -4,8 +4,10 @@ import { MutedLabel } from '../../../components/MutedLabel'
 import { formatDate, formatPercent } from '../../../lib/format'
 import { usePlayThresholds } from '../../../lib/playThresholds'
 import { PlayPill } from '../../watching-dashboard/PlayPill'
-import { GateChip } from '../GateChip'
-import type { GateRow, Sign } from '../types'
+import { GATE_META, GATE_STYLE } from '../gate-style'
+import { GateIcon } from '../GateIcon'
+import { SignsPanel } from './SignsPanel'
+import type { GateRow } from '../types'
 
 interface Props {
   row: GateRow
@@ -36,25 +38,12 @@ function fileName(relPath: string): string {
   return p.slice(p.lastIndexOf('/') + 1)
 }
 
-/** One warning/encouraging sign row — shared with the expanded ticker route. */
-export function SignItem({ sign }: { sign: Sign }): ReactElement {
-  const color = sign.polarity === 'encouraging' ? 'var(--color-up)' : 'var(--color-warning)'
-  return (
-    <li style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 6, lineHeight: 1.5 }}>
-      <span style={{ color, flexShrink: 0 }}>{sign.polarity === 'encouraging' ? '▲' : '▼'}</span>
-      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-        {sign.label}
-      </span>
-    </li>
-  )
-}
-
 export function GatePanel({ row, onClose, onOpenReader, onExpand }: Props): ReactElement {
   const thresholds = usePlayThresholds()
   const { numeric, brain, market } = row
 
   return (
-    <SlideOverPanel>
+    <SlideOverPanel width={520}>
       {/* Identity header (ticker · company · sector only — market data lives in the numeric block) */}
       <div
         style={{
@@ -184,36 +173,72 @@ export function GatePanel({ row, onClose, onOpenReader, onExpand }: Props): Reac
           {sourceTag('from the brain')}
           {brain ? (
             <>
+              {/* Verdict hero — square tinted icon chip + large gate word + tagline + summary */}
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  marginBottom: 'var(--space-3)'
+                  alignItems: 'flex-start',
+                  gap: 'var(--space-3)',
+                  marginBottom: 'var(--space-4)'
                 }}
               >
-                <GateChip gate={brain.gate} />
-                {brain.gateSummary && (
-                  <span
-                    style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}
-                  >
-                    {brain.gateSummary}
-                  </span>
-                )}
-              </div>
-              {brain.signs.length > 0 && (
-                <ul
+                <div
                   style={{
-                    listStyle: 'none',
-                    margin: 0,
-                    padding: 0,
-                    marginBottom: 'var(--space-3)'
+                    width: 38,
+                    height: 38,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 'var(--radius-md)',
+                    background: GATE_STYLE[brain.gate].background,
+                    border:
+                      brain.gate === 'unset' ? '1px solid var(--color-border-subtle)' : 'none',
+                    color: GATE_STYLE[brain.gate].color
                   }}
                 >
-                  {brain.signs.map((sign, i) => (
-                    <SignItem key={i} sign={sign} />
-                  ))}
-                </ul>
+                  <GateIcon name={GATE_META[brain.gate].icon} size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 22,
+                        fontWeight: 'var(--font-medium)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        lineHeight: 1.1,
+                        color: GATE_STYLE[brain.gate].color
+                      }}
+                    >
+                      {brain.gate}
+                    </span>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                      {GATE_META[brain.gate].tagline}
+                    </span>
+                  </div>
+                  {brain.gateSummary && (
+                    <p
+                      style={{
+                        margin: '4px 0 0',
+                        fontSize: 'var(--text-sm)',
+                        lineHeight: 'var(--leading-normal)',
+                        color: 'var(--color-text-secondary)'
+                      }}
+                    >
+                      {brain.gateSummary}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {brain.signs.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <MutedLabel as="div" size={10} style={{ marginBottom: 'var(--space-2)' }}>
+                    signs
+                  </MutedLabel>
+                  <SignsPanel signs={brain.signs} />
+                </div>
               )}
 
               {/* Review stack */}
