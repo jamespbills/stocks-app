@@ -134,8 +134,15 @@ export interface ReviewDoc {
   pageType: PageType
 }
 
-/** Module-local navigation: the qualifiers gate list, or the full-route Reader for one page. */
-export type View = { kind: 'gate' } | { kind: 'reader'; relPath: string }
+/**
+ * Module-local navigation: the qualifiers gate list, the expanded two-material ticker route
+ * (Approach C), or the full-route Reader. The Reader carries its origin so its breadcrumb
+ * returns to wherever it was opened from (gate list vs a ticker route).
+ */
+export type View =
+  | { kind: 'gate' }
+  | { kind: 'ticker'; ticker: string }
+  | { kind: 'reader'; relPath: string; from: 'gate' | { ticker: string } }
 
 // ── Ticker Gate (Stage 3) ───────────────────────────────────────────────────
 // The engine's numeric verdict and the brain's qualitative verdict are kept as SEPARATE
@@ -165,6 +172,12 @@ export interface BrainVerdict {
   signs: Sign[]
   /** Underlying source reviews (archive relPaths) listed in the page frontmatter. */
   sources: string[]
+  /** Agent's qualitative conviction ranking (1–5) — advisory only, never a score input. */
+  conviction: number | null
+  /** Agent's qualitative risk read (low | moderate | high) — advisory only. */
+  riskRating: string | null
+  /** When the judgement was authored (`last_updated`, else `review_date`). */
+  authoredDate: string | null
 }
 
 /** Market context for a ticker, where available (live price + 52-week high). */

@@ -1,14 +1,6 @@
 import type { CSSProperties, ReactElement } from 'react'
+import { GATE_STYLE } from './gate-style'
 import type { Gate } from './types'
-
-// Locked gate colour map (wireframe-decisions → Markdown Reviews):
-// pass → up/green · fail → down/red · watch → warning/amber · unset → muted.
-const GATE_STYLE: Record<Gate, { color: string; background: string }> = {
-  pass: { color: 'var(--color-up)', background: 'var(--color-up-bg)' },
-  fail: { color: 'var(--color-down)', background: 'var(--color-down-bg)' },
-  watch: { color: 'var(--color-warning)', background: 'var(--color-warning-bg)' },
-  unset: { color: 'var(--color-text-muted)', background: 'transparent' }
-}
 
 const baseStyle: CSSProperties = {
   display: 'inline-flex',

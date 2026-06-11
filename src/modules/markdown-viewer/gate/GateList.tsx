@@ -10,6 +10,8 @@ interface Props {
   selectedTicker: string | null
   panelOpen: boolean
   onSelect: (ticker: string) => void
+  /** Enter on the selected row opens the expanded ticker route (Approach C). */
+  onExpand: (ticker: string) => void
 }
 
 const th: CSSProperties = {
@@ -32,7 +34,13 @@ const td: CSSProperties = {
   whiteSpace: 'nowrap'
 }
 
-export function GateList({ rows, selectedTicker, panelOpen, onSelect }: Props): ReactElement {
+export function GateList({
+  rows,
+  selectedTicker,
+  panelOpen,
+  onSelect,
+  onExpand
+}: Props): ReactElement {
   const thresholds = usePlayThresholds()
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
 
@@ -50,9 +58,12 @@ export function GateList({ rows, selectedTicker, panelOpen, onSelect }: Props): 
         e.preventDefault()
         const prev = rows[idx - 1]
         if (prev) onSelect(prev.ticker)
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        onExpand(selectedTicker)
       }
     },
-    [selectedTicker, rows, onSelect]
+    [selectedTicker, rows, onSelect, onExpand]
   )
 
   useEffect(() => {

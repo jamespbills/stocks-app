@@ -11,6 +11,8 @@ interface Props {
   row: GateRow
   onClose: () => void
   onOpenReader: (relPath: string) => void
+  /** Open the expanded two-material ticker route (Approach C) — the panel's ↗. */
+  onExpand: () => void
 }
 
 const sectionPad: CSSProperties = { padding: 'var(--space-4) var(--space-5)' }
@@ -34,7 +36,8 @@ function fileName(relPath: string): string {
   return p.slice(p.lastIndexOf('/') + 1)
 }
 
-function SignItem({ sign }: { sign: Sign }): ReactElement {
+/** One warning/encouraging sign row — shared with the expanded ticker route. */
+export function SignItem({ sign }: { sign: Sign }): ReactElement {
   const color = sign.polarity === 'encouraging' ? 'var(--color-up)' : 'var(--color-warning)'
   return (
     <li style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 6, lineHeight: 1.5 }}>
@@ -46,7 +49,7 @@ function SignItem({ sign }: { sign: Sign }): ReactElement {
   )
 }
 
-export function GatePanel({ row, onClose, onOpenReader }: Props): ReactElement {
+export function GatePanel({ row, onClose, onOpenReader, onExpand }: Props): ReactElement {
   const thresholds = usePlayThresholds()
   const { numeric, brain, market } = row
 
@@ -78,22 +81,39 @@ export function GatePanel({ row, onClose, onOpenReader }: Props): ReactElement {
           </div>
           {row.sector && <MutedLabel size={11}>{row.sector}</MutedLabel>}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close panel"
-          style={{
-            marginLeft: 'auto',
-            background: 'none',
-            border: 'none',
-            padding: 6,
-            cursor: 'pointer',
-            color: 'var(--color-text-muted)',
-            fontSize: 16,
-            lineHeight: 1
-          }}
-        >
-          ×
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+          <button
+            onClick={onExpand}
+            aria-label="Expand to full view"
+            title="Expand to full view (Enter)"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 6,
+              cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              fontSize: 14,
+              lineHeight: 1
+            }}
+          >
+            ↗
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close panel"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 6,
+              cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              fontSize: 16,
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>

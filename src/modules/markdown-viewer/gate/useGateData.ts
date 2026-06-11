@@ -12,10 +12,12 @@ import {
   type LivePriceRow,
   type QualifierRow
 } from './queries'
-import type { GateRow } from '../types'
+import type { GateRow, ReviewEntry } from '../types'
 
 interface GateData {
   rows: GateRow[]
+  /** The full brain index — the expanded ticker route enriches its review stack from this. */
+  entries: ReviewEntry[]
   loading: boolean
   error: string | null
   refetch: () => void
@@ -48,6 +50,7 @@ export function useGateData(): GateData {
 
   return {
     rows,
+    entries: brain.entries,
     loading: brain.loading || qualifiers.loading,
     error: qualifiers.error ?? brain.error ?? null,
     refetch

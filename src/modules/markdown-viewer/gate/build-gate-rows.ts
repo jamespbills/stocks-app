@@ -123,7 +123,10 @@ export function buildGateRows(
         gate: effectiveGate(entry.frontmatter),
         gateSummary: entry.frontmatter.gate_summary ?? null,
         signs: (entry.frontmatter.signs as Sign[] | undefined) ?? [],
-        sources: entry.frontmatter.sources ?? []
+        sources: entry.frontmatter.sources ?? [],
+        conviction: intOrNull(entry.frontmatter.conviction ?? null),
+        riskRating: entry.frontmatter.risk_rating ?? null,
+        authoredDate: entry.frontmatter.last_updated ?? entry.frontmatter.review_date ?? null
       }
     }
 

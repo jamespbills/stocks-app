@@ -3,13 +3,15 @@ import { ModuleHeader, type Surface } from './ModuleHeader'
 import { Reader } from './Reader'
 import { GateList } from './gate/GateList'
 import { GatePanel } from './gate/GatePanel'
+import { TickerExpanded } from './gate/TickerExpanded'
 import { useGateData } from './gate/useGateData'
 import type { View } from './types'
 
-// Stage 3 (Ticker Gate): the Reviews tab is the qualifiers gate list + a 420px slide-over
-// pairing the engine's numeric verdict with the brain's qualitative gate (two separate,
-// separately-sourced blocks — never blended). The Reader (Stage 2) is reached from the
-// panel's review stack and from in-brain links. Library / Dashboards / Inbox stay placeholders.
+// The Reviews tab: qualifiers gate list + 420px slide-over (Approach D), with the panel's ↗
+// (or Enter on the selected row) opening the expanded two-material ticker route (Approach C).
+// Numeric and qualitative verdicts stay two separate, separately-sourced blocks everywhere —
+// never blended. The Reader is reached from review stacks and in-brain links, and returns to
+// wherever it was opened from. Library / Dashboards / Inbox stay placeholders.
 
 const SURFACE_BLURB: Record<Exclude<Surface, 'reviews'>, string> = {
   library: 'Signal & play library — lessons as cards with live "currently flags" footers.',
@@ -35,30 +37,42 @@ function Placeholder({ surface }: { surface: Exclude<Surface, 'reviews'> }): Rea
 }
 
 function ReviewsSurface(): ReactElement {
-  const { rows, loading, error } = useGateData()
+  const { rows, entries, loading, error } = useGateData()
   const [view, setView] = useState<View>({ kind: 'gate' })
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
 
-  // Escape clears the slide-over selection.
+  // Escape: on the expanded ticker route, back to the gate list (selection preserved so the
+  // panel re-opens); on the gate list, clear the slide-over selection.
   useEffect(() => {
     function handleKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') setSelectedTicker(null)
+      if (e.key !== 'Escape') return
+      if (view.kind === 'ticker') setView({ kind: 'gate' })
+      else if (view.kind === 'gate') setSelectedTicker(null)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [])
+  }, [view])
 
   const handleSelect = useCallback((ticker: string) => {
     setSelectedTicker((cur) => (cur === ticker ? null : ticker))
   }, [])
 
+  const handleExpand = useCallback((ticker: string) => {
+    setSelectedTicker(ticker)
+    setView({ kind: 'ticker', ticker })
+  }, [])
+
   if (view.kind === 'reader') {
+    const from = view.from
     return (
       <Reader
         key={view.relPath}
         relPath={view.relPath}
-        onNavigate={(relPath) => setView({ kind: 'reader', relPath })}
-        onBack={() => setView({ kind: 'gate' })}
+        backLabel={from === 'gate' ? 'Reviews' : from.ticker}
+        onNavigate={(relPath) => setView({ kind: 'reader', relPath, from })}
+        onBack={() =>
+          setView(from === 'gate' ? { kind: 'gate' } : { kind: 'ticker', ticker: from.ticker })
+        }
       />
     )
   }
@@ -90,6 +104,24 @@ function ReviewsSurface(): ReactElement {
     )
   }
 
+  // Expanded two-material route (Approach C). If the ticker vanished after a refetch, fall
+  // through to the gate list.
+  if (view.kind === 'ticker') {
+    const tickerRow = rows.find((r) => r.ticker === view.ticker)
+    if (tickerRow) {
+      return (
+        <TickerExpanded
+          row={tickerRow}
+          entries={entries}
+          onBack={() => setView({ kind: 'gate' })}
+          onOpenReader={(relPath) =>
+            setView({ kind: 'reader', relPath, from: { ticker: tickerRow.ticker } })
+          }
+        />
+      )
+    }
+  }
+
   const selectedRow = selectedTicker ? rows.find((r) => r.ticker === selectedTicker) : undefined
 
   return (
@@ -104,13 +136,15 @@ function ReviewsSurface(): ReactElement {
           selectedTicker={selectedTicker}
           panelOpen={selectedRow !== undefined}
           onSelect={handleSelect}
+          onExpand={handleExpand}
         />
       </div>
       {selectedRow && (
         <GatePanel
           row={selectedRow}
           onClose={() => setSelectedTicker(null)}
-          onOpenReader={(relPath) => setView({ kind: 'reader', relPath })}
+          onOpenReader={(relPath) => setView({ kind: 'reader', relPath, from: 'gate' })}
+          onExpand={() => handleExpand(selectedRow.ticker)}
         />
       )}
     </div>

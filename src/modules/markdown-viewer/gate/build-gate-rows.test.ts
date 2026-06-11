@@ -61,7 +61,11 @@ const BRAIN: ReviewEntry[] = [
     gate: 'fail',
     gate_summary: 'KPIs in freefall',
     signs: [{ polarity: 'warning', label: 'Headcount -21%' }],
-    sources: ['archive/2026-04-02-FDM_Group_Post_Mortem.md']
+    sources: ['archive/2026-04-02-FDM_Group_Post_Mortem.md'],
+    conviction: 2,
+    risk_rating: 'high',
+    last_updated: '2026-04-02',
+    review_date: '2026-03-27'
   }),
   // Brain page that is NOT currently qualifying → orphan.
   tickerEntry('wiki/nxt.md', {
@@ -139,6 +143,17 @@ describe('buildGateRows', () => {
     const nxt = byTicker('NXT.L')
     expect(nxt.numeric).toBeNull()
     expect(nxt.brain?.gate).toBe('watch')
+  })
+
+  it('carries advisory fields through (last_updated wins over review_date); null when absent', () => {
+    const fdm = byTicker('FDM.L')
+    expect(fdm.brain?.conviction).toBe(2)
+    expect(fdm.brain?.riskRating).toBe('high')
+    expect(fdm.brain?.authoredDate).toBe('2026-04-02')
+    const nxt = byTicker('NXT.L')
+    expect(nxt.brain?.conviction).toBeNull()
+    expect(nxt.brain?.riskRating).toBeNull()
+    expect(nxt.brain?.authoredDate).toBeNull()
   })
 
   it('D4 — numeric and brain stay separate objects; no blended/combined field exists', () => {

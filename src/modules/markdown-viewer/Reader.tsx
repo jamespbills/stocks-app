@@ -13,8 +13,10 @@ interface Props {
   relPath: string
   /** Navigate to another brain page (in-brain link click). */
   onNavigate: (relPath: string) => void
-  /** Return to the browse list. */
+  /** Return to wherever the Reader was opened from (gate list or a ticker route). */
   onBack: () => void
+  /** Breadcrumb label for the back target (defaults to the gate list). */
+  backLabel?: string
 }
 
 const linkStyle: CSSProperties = {
@@ -29,7 +31,12 @@ const linkStyle: CSSProperties = {
 }
 const extLinkStyle: CSSProperties = { color: 'var(--color-text-secondary)' }
 
-export function Reader({ relPath, onNavigate, onBack }: Props): ReactElement {
+export function Reader({
+  relPath,
+  onNavigate,
+  onBack,
+  backLabel = 'Reviews'
+}: Props): ReactElement {
   const { doc, error } = useReviewDoc(relPath)
 
   const components = useMemo<Components>(
@@ -192,7 +199,7 @@ export function Reader({ relPath, onNavigate, onBack }: Props): ReactElement {
             padding: 0
           }}
         >
-          Reviews
+          {backLabel}
         </button>
         <span style={{ color: 'var(--color-text-disabled)' }}>/</span>
         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>
