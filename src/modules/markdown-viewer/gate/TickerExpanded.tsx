@@ -18,9 +18,11 @@ interface Props {
   row: GateRow
   /** The full brain index, used to enrich the review stack (title / type / date). */
   entries: ReviewEntry[]
-  /** Return to the gate list (breadcrumb; Esc is handled by the parent). */
+  /** Return to wherever the route was opened from (breadcrumb; Esc is handled by the parent). */
   onBack: () => void
   onOpenReader: (relPath: string) => void
+  /** Breadcrumb label for the back target (defaults to the gate list). */
+  backLabel?: string
 }
 
 const timestampStyle: CSSProperties = {
@@ -413,7 +415,13 @@ function StackRowButton({ item, onClick }: { item: StackRow; onClick: () => void
 
 // ── The route ───────────────────────────────────────────────────────────────
 
-export function TickerExpanded({ row, entries, onBack, onOpenReader }: Props): ReactElement {
+export function TickerExpanded({
+  row,
+  entries,
+  onBack,
+  onOpenReader,
+  backLabel = 'Reviews'
+}: Props): ReactElement {
   const stack = useMemo(() => buildStack(row, entries), [row, entries])
   const wikiPath = row.brain?.relPath ?? null
 
@@ -441,7 +449,7 @@ export function TickerExpanded({ row, entries, onBack, onOpenReader }: Props): R
             padding: 0
           }}
         >
-          Reviews
+          {backLabel}
         </button>
         <span style={{ color: 'var(--color-text-disabled)' }}>/</span>
         <span

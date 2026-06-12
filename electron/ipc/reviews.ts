@@ -10,12 +10,14 @@ import type {
   BrainFile,
   BrainIndex,
   PageType,
-  ReviewDoc
+  ReviewDoc,
+  SignalLibraryEntry,
+  SignalLibraryResult
 } from '../../src/modules/markdown-viewer/types'
 
 // The brain's top-level folders the module reads. Markdown only — by design.
 const BRAIN_FOLDERS = ['wiki', 'raw', 'archive']
-const PAGE_TYPES: readonly PageType[] = ['ticker', 'sector', 'signal', 'review']
+const PAGE_TYPES: readonly PageType[] = ['ticker', 'sector', 'signal', 'play', 'review']
 
 /** The configured brain root if it is set and exists on disk, else null. */
 function brainRoot(): string | null {
@@ -82,6 +84,24 @@ export function registerReviewsHandlers(): void {
       frontmatter: parsed.data,
       body: parsed.content,
       pageType
+    }
+  })
+
+  // The canonical signal library JSON, kept alongside the wiki. Optional — a missing or
+  // unparseable file degrades to `available: false` (Library cards render wiki-only).
+  // Filesystem-only, confined to the brain root; no MySQL.
+  ipcMain.handle('reviews:signalLibrary', (): SignalLibraryResult => {
+    const root = brainRoot()
+    if (!root) return { available: false, signals: [] }
+
+    try {
+      const raw = readFileSync(join(root, 'signal_library', 'signal_library.json'), 'utf-8')
+      const parsed: unknown = JSON.parse(raw)
+      const signals = (parsed as { signals?: unknown }).signals
+      if (!Array.isArray(signals)) return { available: false, signals: [] }
+      return { available: true, signals: signals as SignalLibraryEntry[] }
+    } catch {
+      return { available: false, signals: [] }
     }
   })
 }

@@ -6,7 +6,10 @@ import { parseFrontmatter } from './frontmatter'
 import { inferPageTypeFromPath, resolveTicker } from './ticker'
 import type { IndexEntry, KnownTickers, PageType } from './types'
 
-const PAGE_TYPES: readonly PageType[] = ['ticker', 'sector', 'signal', 'review']
+// `play` is accepted from frontmatter only — `inferPageTypeFromPath` never yields it,
+// because `PLAY` is a real US ticker (Dave & Buster's) and `wiki/play.md` would be ambiguous.
+// The brain schema requires `page_type` on every wiki page, so this is the safe default.
+const PAGE_TYPES: readonly PageType[] = ['ticker', 'sector', 'signal', 'play', 'review']
 
 function isPageType(value: unknown): value is PageType {
   return typeof value === 'string' && (PAGE_TYPES as readonly string[]).includes(value)

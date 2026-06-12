@@ -5,21 +5,27 @@ import { GateList } from './gate/GateList'
 import { GatePanel } from './gate/GatePanel'
 import { TickerExpanded } from './gate/TickerExpanded'
 import { useGateData } from './gate/useGateData'
+import { LibrarySurface } from './library/LibrarySurface'
+import { DashboardsSurface } from './dashboards/DashboardsSurface'
 import type { View } from './types'
 
-// The Reviews tab: qualifiers gate list + 420px slide-over (Approach D), with the panel's ↗
+// The Reviews tab: qualifiers gate list + 520px slide-over (Approach D), with the panel's ↗
 // (or Enter on the selected row) opening the expanded two-material ticker route (Approach C).
 // Numeric and qualitative verdicts stay two separate, separately-sourced blocks everywhere —
 // never blended. The Reader is reached from review stacks and in-brain links, and returns to
-// wherever it was opened from. Library / Dashboards / Inbox stay placeholders.
+// wherever it was opened from. The Library tab browses signal/play pages as cards; the
+// Dashboards tab is the overview (Coverage · Gate board · Theme tracker). Inbox stays a
+// placeholder.
 
-const SURFACE_BLURB: Record<Exclude<Surface, 'reviews'>, string> = {
-  library: 'Signal & play library — lessons as cards with live "currently flags" footers.',
-  dashboards: 'Coverage + gate board — which qualifiers your judgement has not caught up with.',
+const SURFACE_BLURB: Record<Exclude<Surface, 'reviews' | 'library' | 'dashboards'>, string> = {
   inbox: 'Drop zone, pending-in-raw, and the unmatched tray for new reviews.'
 }
 
-function Placeholder({ surface }: { surface: Exclude<Surface, 'reviews'> }): ReactElement {
+function Placeholder({
+  surface
+}: {
+  surface: Exclude<Surface, 'reviews' | 'library' | 'dashboards'>
+}): ReactElement {
   return (
     <div
       className="flex h-full flex-col items-center justify-center gap-2 text-center"
@@ -177,7 +183,15 @@ export default function MarkdownViewer(): ReactElement {
     >
       <ModuleHeader activeSurface={surface} onSurfaceChange={setSurface} inboxCount={0} />
       <div style={{ flex: 1, minHeight: 0 }}>
-        {surface === 'reviews' ? <ReviewsSurface /> : <Placeholder surface={surface} />}
+        {surface === 'reviews' ? (
+          <ReviewsSurface />
+        ) : surface === 'library' ? (
+          <LibrarySurface />
+        ) : surface === 'dashboards' ? (
+          <DashboardsSurface />
+        ) : (
+          <Placeholder surface={surface} />
+        )}
       </div>
     </div>
   )

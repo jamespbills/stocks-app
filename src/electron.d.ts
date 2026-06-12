@@ -4,7 +4,7 @@ import type {
   CsvPreview,
   ParsedBar
 } from './modules/price-archive/types'
-import type { BrainIndex, ReviewDoc } from './modules/markdown-viewer/types'
+import type { BrainIndex, ReviewDoc, SignalLibraryResult } from './modules/markdown-viewer/types'
 
 export interface DBStatus {
   connected: boolean
@@ -41,6 +41,7 @@ declare global {
       reviews: {
         rescan: () => Promise<BrainIndex>
         get: (relPath: string) => Promise<ReviewDoc>
+        signalLibrary: () => Promise<SignalLibraryResult>
       }
       scripts: {
         launch: (scriptPath: string, args: string[]) => Promise<number>

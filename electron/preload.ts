@@ -50,7 +50,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   reviews: {
     rescan: () => ipcRenderer.invoke('reviews:rescan'),
-    get: (relPath: string) => ipcRenderer.invoke('reviews:get', relPath)
+    get: (relPath: string) => ipcRenderer.invoke('reviews:get', relPath),
+    signalLibrary: () => ipcRenderer.invoke('reviews:signalLibrary')
   },
   win: {
     minimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
