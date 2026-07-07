@@ -13,8 +13,8 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict
+from datetime import datetime, timedelta, date
+from typing import Optional, List, Dict, Set, Tuple
 
 import mysql.connector
 import requests
@@ -51,6 +51,37 @@ class EarningsRecord:
     eps_estimate: Optional[float]
     revenue_estimate: Optional[float]
     source: str
+    # FMP only: the reported fiscal period end (Finnhub uses `quarter` instead).
+    fiscal_date_ending: Optional[str] = None
+
+
+def _parse_iso_date(value: Optional[str]) -> Optional[date]:
+    """Parse a 'YYYY-MM-DD' (or longer ISO) string to a date, else None."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _matches_tracked_period_end(
+    period_end: date, tracked: Set[Tuple[int, int]], tolerance_days: int = 5
+) -> bool:
+    """True if `period_end` falls within ±tolerance_days of any tracked (month, day)
+    period end, checking adjacent years so a late-December end still matches a
+    turn-of-year target. Only the annual/semiannual period ends James tracks live in
+    `tracked`, so a Q1/Q3 fiscal end (e.g. Mar-31 / Sep-30) returns False."""
+    for month, day in tracked:
+        for year in (period_end.year - 1, period_end.year, period_end.year + 1):
+            try:
+                candidate = date(year, month, day)
+            except ValueError:
+                # e.g. Feb-29 in a non-leap year — clamp to the 28th.
+                candidate = date(year, month, min(day, 28))
+            if abs((period_end - candidate).days) <= tolerance_days:
+                return True
+    return False
 
 
 class FinnhubClient:
@@ -104,6 +135,10 @@ class FMPClient:
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
             data = response.json()
+            # One-time visibility: confirm fiscalDateEnding is present in the payload
+            # (the period-end filter depends on it; if absent, rows are kept as a fallback).
+            if data:
+                logger.info(f"FMP: sample item keys: {sorted(data[0].keys())}")
             records = []
             for item in data:
                 if item.get("symbol") and item.get("date"):
@@ -117,6 +152,7 @@ class FMPClient:
                             eps_estimate=item.get("epsEstimated"),
                             revenue_estimate=item.get("revenueEstimated"),
                             source="fmp",
+                            fiscal_date_ending=item.get("fiscalDateEnding"),
                         )
                     )
             logger.info(f"FMP: {len(records)} records")
@@ -158,6 +194,26 @@ class EarningsScanner:
             """
         )
         return {row["ticker"]: row["company_id"] for row in self.cursor.fetchall()}
+
+    def get_period_ends(self) -> Dict[str, Set[Tuple[int, int]]]:
+        """Per ticker, the set of (month, day) fiscal period ends James actually tracks,
+        read from the real reports in fact_reports. Used to drop off-cycle FMP dates
+        (Q1/Q3) that FMP gives us with no quarter label."""
+        self.cursor.execute(
+            """
+            SELECT dc.ticker AS ticker,
+                   MONTH(fr.report_date) AS m,
+                   DAY(fr.report_date) AS d
+            FROM fact_reports fr
+            JOIN dim_companies dc ON fr.company_id = dc.company_id
+            WHERE fr.report_date IS NOT NULL AND dc.delisting_date IS NULL
+            GROUP BY dc.ticker, m, d
+            """
+        )
+        out: Dict[str, Set[Tuple[int, int]]] = {}
+        for row in self.cursor.fetchall():
+            out.setdefault(row["ticker"], set()).add((int(row["m"]), int(row["d"])))
+        return out
 
     def get_existing_record(self, ticker: str, source: str) -> Optional[dict]:
         self.cursor.execute(
@@ -291,6 +347,8 @@ class EarningsScanner:
                 logger.warning("No tickers in view_earnings_calendar_actionable")
                 return
 
+            period_ends = self.get_period_ends()
+
             self.update_existing_statuses()
 
             from_date = datetime.now().strftime("%Y-%m-%d")
@@ -304,24 +362,47 @@ class EarningsScanner:
                 all_records.extend(self.fmp.get_earnings(from_date, to_date))
             logger.info(f"Total API records: {len(all_records)}")
 
-            stats = {"inserted": 0, "updated": 0, "unchanged": 0, "errors": 0, "skipped_quarter": 0}
+            stats = {
+                "inserted": 0,
+                "updated": 0,
+                "unchanged": 0,
+                "errors": 0,
+                "skipped_quarter": 0,
+                "skipped_period": 0,
+            }
             matched: set = set()
 
             for record in all_records:
-                if record.ticker in tickers:
-                    if record.quarter in (1, 3):
-                        stats["skipped_quarter"] += 1
+                if record.ticker not in tickers:
+                    continue
+
+                # Finnhub labels the quarter — drop Q1/Q3 outright.
+                if record.quarter in (1, 3):
+                    stats["skipped_quarter"] += 1
+                    continue
+
+                # FMP gives no quarter, so filter its off-cycle (Q1/Q3) dates by matching
+                # the reported fiscal period end against the ticker's real annual/semiannual
+                # period ends (±5 days). Missing/unparseable period end, or a ticker with no
+                # tracked ends, falls through and is kept for the view guards to handle.
+                if record.source == "fmp":
+                    tracked = period_ends.get(record.ticker)
+                    fde = _parse_iso_date(record.fiscal_date_ending)
+                    if tracked and fde is not None and not _matches_tracked_period_end(fde, tracked):
+                        stats["skipped_period"] += 1
                         continue
-                    result = self.upsert_record(record, tickers[record.ticker])
-                    stats[result] += 1
-                    if result in ("inserted", "updated", "unchanged"):
-                        matched.add(record.ticker)
+
+                result = self.upsert_record(record, tickers[record.ticker])
+                stats[result] += 1
+                if result in ("inserted", "updated", "unchanged"):
+                    matched.add(record.ticker)
 
             self.connection.commit()
             logger.info(f"Matched {len(matched)} tickers")
             logger.info(
                 f"Inserted: {stats['inserted']}, Updated: {stats['updated']}, "
-                f"Unchanged: {stats['unchanged']}, Skipped Q1/Q3: {stats['skipped_quarter']}"
+                f"Unchanged: {stats['unchanged']}, Skipped Q1/Q3: {stats['skipped_quarter']}, "
+                f"Skipped FMP off-cycle: {stats['skipped_period']}"
             )
         finally:
             self.disconnect()
