@@ -386,6 +386,10 @@ export default function SectorSignals(): ReactElement {
       }
 
       await window.electronAPI.db.callProc('calculate_all_sector_play_ratings')
+      // Rebuild the materialised stock_archive_flat mirror so the Master Excel
+      // (which reads the flat table, not fact_metrics) reflects the new ratings.
+      // Must run last, after the recompute — see tasks/lessons.md (2026-06-17).
+      await window.electronAPI.db.callProc('sp_refresh_stock_archive_flat')
 
       setPendingChanges(new Map())
       setAppliedCount(count)
